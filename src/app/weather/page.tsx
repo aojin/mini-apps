@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface WeatherData {
   name: string;
@@ -136,38 +137,44 @@ export default function WeatherPage() {
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto mt-10 p-6 bg-gray-100 rounded-xl shadow">
+    <div className="flex flex-col items-center w-full max-w-md mx-auto mt-10 mb-10 p-6 bg-gray-100 rounded-xl shadow">
+      {/* Back button */}
+      <div className="self-start mb-4">
+        <Link
+          href="/"
+          className="text-blue-600 hover:underline text-sm"
+        >
+          ← Back to Mini Apps
+        </Link>
+      </div>
+
       <h1 className="text-2xl font-bold mb-4">Weather Dashboard</h1>
 
       {/* --- About Box --- */}
       <div className="mb-6 p-4 w-full bg-blue-50 border-l-4 border-blue-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
-          This demo showcases real-time weather lookups with city autocomplete
-          and user-managed favorites, persisted locally. It highlights common
-          React patterns used in real projects.
+          This mini-app demonstrates real-time weather lookups with city autocomplete
+          and user-managed favorites, persisted locally. It’s designed as a showcase
+          of front-end engineering techniques you’d use in production.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
           <li>
-            <strong>State + Effect hooks</strong> for managing API requests and
-            UI flow.
+            <strong>State & Effect hooks</strong> for async data fetching and persistence.
           </li>
           <li>
-            <strong>Debounced search + autocomplete</strong> powered by the
-            OpenWeather Geo API.
+            <strong>Debounced search + autocomplete</strong> powered by the OpenWeather Geo API.
           </li>
           <li>
-            <strong>LocalStorage persistence</strong> for favorite cities,
-            demonstrating client-side data storage.
+            <strong>LocalStorage persistence</strong> to keep favorite cities across refreshes.
           </li>
           <li>
-            <strong>Dynamic list rendering</strong> with per-item refresh and
-            remove controls.
+            <strong>Dynamic rendering</strong> of favorite city cards with refresh/remove actions.
           </li>
         </ul>
         <p className="mt-2 text-sm text-gray-600">
-          🔮 Possible extensions: 5-day forecast, unit toggle (°C/°F), geolocation
-          for current position, and syncing favorites to a cloud database.
+          🔮 Possible extensions: 5-day forecast, °C/°F toggle, geolocation for current position,
+          and cloud sync for cross-device favorites.
         </p>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface Coin {
   id: string;
@@ -42,23 +43,31 @@ export default function CryptoPage() {
   );
 
   return (
-    <div className="flex flex-col items-center w-full max-w-3xl mx-auto mt-10 p-6 bg-gray-50 rounded-xl shadow">
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto mt-10 mb-10 p-6 bg-gray-50 rounded-xl shadow">
       <h1 className="text-2xl font-bold mb-4">Crypto Price Tracker</h1>
+
+      {/* Back navigation */}
+      <Link
+        href="/"
+        className="mb-6 self-start px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+      >
+        ← Back to Mini Apps
+      </Link>
 
       <div className="mb-6 p-4 w-full bg-green-50 border-l-4 border-green-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
-            A real-time crypto price tracker that pulls live data from the CoinGecko API,
-            refreshing every 30 seconds with search filtering.
+          A real-time crypto price tracker that pulls live data from the
+          CoinGecko API, refreshing every 30 seconds with search filtering.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
-            <li>API fetching with useEffect and auto-refresh</li>
-            <li>Search filter for dynamic client-side filtering</li>
-            <li>Conditional styling for price movement</li>
+          <li>API fetching with useEffect and auto-refresh</li>
+          <li>Search filter for dynamic client-side filtering</li>
+          <li>Conditional styling for price movement</li>
         </ul>
         <p className="mt-2 text-sm text-gray-600">
-            🔮 Possible features: historical charts, sorting by market cap, favorites
-            watchlist.
+          🔮 Possible features: historical charts, sorting by market cap,
+          favorites watchlist.
         </p>
       </div>
 
@@ -80,7 +89,9 @@ export default function CryptoPage() {
           >
             <img src={coin.image} alt={coin.name} className="w-10 h-10 mr-4" />
             <div className="flex-1">
-              <h3 className="font-semibold">{coin.name} ({coin.symbol.toUpperCase()})</h3>
+              <h3 className="font-semibold">
+                {coin.name} ({coin.symbol.toUpperCase()})
+              </h3>
               <p>${coin.current_price.toLocaleString()}</p>
               <p
                 className={`text-sm ${

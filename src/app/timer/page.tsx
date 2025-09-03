@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 
 export default function TimerPage() {
   const WORK_TIME = 25 * 60; // 25 minutes
@@ -80,15 +81,24 @@ export default function TimerPage() {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto mt-10 mb-20 p-6 bg-gray-50 rounded-xl shadow">
+    <div className="flex flex-col items-center w-full max-w-md mx-auto mt-10 mb-10 p-6 bg-gray-50 rounded-xl shadow">
       <h1 className="text-2xl font-bold mb-6">Task Timer ⏱️</h1>
+
+      {/* Back navigation */}
+      <Link
+        href="/"
+        className="mb-6 self-start px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+      >
+        ← Back to Mini Apps
+      </Link>
 
       {/* Info box */}
       <div className="mt-6 mb-6 p-4 w-full bg-blue-50 border-l-4 border-blue-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
-          A Pomodoro-style timer that alternates 25-minute work sessions and 5-minute breaks.
-          Shows progress and sends notifications when a session ends.
+          A Pomodoro-style timer that alternates 25-minute work sessions and
+          5-minute breaks. Shows progress and sends notifications when a session
+          ends.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
           <li>React state & interval effects</li>
@@ -99,41 +109,44 @@ export default function TimerPage() {
       </div>
 
       {/* Progress ring */}
-    <div className="relative w-48 h-48 mb-6">
-    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-        {/* Background circle */}
-        <circle
-        cx="100"
-        cy="100"
-        r="90"
-        stroke="currentColor"
-        strokeWidth="12"
-        className="text-gray-300"
-        fill="transparent"
-        />
-        {/* Progress circle */}
-        <circle
-        cx="100"
-        cy="100"
-        r="90"
-        stroke="currentColor"
-        strokeWidth="12"
-        className="text-blue-500 transition-all duration-1000 ease-linear"
-        fill="transparent"
-        strokeDasharray={2 * Math.PI * 90}
-        strokeDashoffset={(1 - progress) * 2 * Math.PI * 90}
-        strokeLinecap="round"
-        />
-    </svg>
+      <div className="relative w-48 h-48 mb-6">
+        <svg
+          className="w-full h-full transform -rotate-90"
+          viewBox="0 0 200 200"
+        >
+          {/* Background circle */}
+          <circle
+            cx="100"
+            cy="100"
+            r="90"
+            stroke="currentColor"
+            strokeWidth="12"
+            className="text-gray-300"
+            fill="transparent"
+          />
+          {/* Progress circle */}
+          <circle
+            cx="100"
+            cy="100"
+            r="90"
+            stroke="currentColor"
+            strokeWidth="12"
+            className="text-blue-500 transition-all duration-1000 ease-linear"
+            fill="transparent"
+            strokeDasharray={2 * Math.PI * 90}
+            strokeDashoffset={(1 - progress) * 2 * Math.PI * 90}
+            strokeLinecap="round"
+          />
+        </svg>
 
-    {/* Center content */}
-    <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-lg font-medium">
-        {mode === "work" ? "Work" : "Break"}
-        </p>
-        <p className="text-3xl font-mono">{formatTime(time)}</p>
-    </div>
-    </div>
+        {/* Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <p className="text-lg font-medium">
+            {mode === "work" ? "Work" : "Break"}
+          </p>
+          <p className="text-3xl font-mono">{formatTime(time)}</p>
+        </div>
+      </div>
 
       {/* Controls */}
       <div className="flex space-x-4 mb-6">
