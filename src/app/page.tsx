@@ -3,6 +3,12 @@ export default function Home() {
     <main className="flex flex-col items-center justify-center h-screen space-y-6">
       <h1 className="text-3xl font-bold">Mini Apps Showcase</h1>
       <a
+        href="/quiz"
+        className="px-6 py-3 bg-cyan-600 text-white rounded hover:bg-cyan-700"
+      >
+        Quiz App
+      </a>
+      <a
         href="/weather"
         className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
@@ -32,12 +38,7 @@ export default function Home() {
       >
         Pomodoro Timer App
       </a>
-      <a
-        href="/quiz"
-        className="px-6 py-3 bg-purple-600 text-white rounded hover:bg-purple-700"
-      >
-        Quiz App
-      </a>
+      
     </main>
   );
 }

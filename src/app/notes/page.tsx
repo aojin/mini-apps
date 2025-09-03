@@ -40,16 +40,18 @@ export default function NotesPage() {
       <div className="mb-6 p-4 w-full bg-yellow-50 border-l-4 border-yellow-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
-            A lightweight notes app where you can create and delete notes with titles
-            and content. Notes persist across refreshes using <code>localStorage</code>.
+            A simple but effective notes app where you can create and delete notes with titles and content. 
+            Notes are saved to <code>localStorage</code>, so they persist even after a page refresh.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
-            <li>React controlled inputs</li>
-            <li>useEffect for localStorage persistence</li>
-            <li>Dynamic rendering of note list with delete handlers</li>
+            <li>React controlled form inputs for creating notes</li>
+            <li><code>useEffect</code> hooks to load and persist notes in localStorage</li>
+            <li>Dynamic rendering of a notes list with delete handlers</li>
+            <li>Clean functional state updates using React hooks</li>
         </ul>
         <p className="mt-2 text-sm text-gray-600">
-            🔮 Possible features: edit notes, tags/categories, sync with a backend DB.
+            🔮 Possible future features: edit notes, add tags or categories, search and filter notes,
+            sync with a backend or cloud database for multi-device support.
         </p>
       </div>
 

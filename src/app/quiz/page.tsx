@@ -40,23 +40,33 @@ export default function QuizPage() {
       <div className="mb-6 p-4 w-full bg-blue-50 border-l-4 border-blue-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
-          Answer multiple-choice questions from the Open Trivia DB.
-          Your scores are saved so you can track past quizzes and start new ones.
+            A lightweight quiz app powered by the Open Trivia DB. It demonstrates
+            common React patterns for building interactive UIs and persisting state
+            across sessions.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
-          <li>React state & effects for quiz flow</li>
-          <li>LocalStorage persistence for quiz history</li>
-          <li>Dynamic rendering of answer correctness</li>
+            <li>Client-side data fetching with error handling</li>
+            <li>State management for multi-step quiz flow</li>
+            <li>Dynamic rendering of correctness and scores</li>
+            <li>LocalStorage persistence for quiz history</li>
+            <li>Conditional rendering (start screen, in-progress, results)</li>
         </ul>
         <p className="mt-2 text-sm text-gray-600">
-          🔮 Possible features: categories, difficulty selection, timed quizzes.
+            🔮 Possible enhancements: categories, difficulty selection, timed quizzes,
+            or syncing history to a backend.
         </p>
       </div>
 
-      {/* No ref/reset logic anymore */}
       <Quiz onComplete={addSession} />
 
-      <QuizHistory history={history} />
+      <QuizHistory
+        history={history}
+        onClear={() => {
+            localStorage.removeItem("quizHistory");
+            setHistory([]);
+        }}
+      />
+
     </div>
   );
 }
