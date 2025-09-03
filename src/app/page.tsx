@@ -1,14 +1,15 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-gray-50">
+  <main className="flex flex-col items-center min-h-screen bg-gray-100 text-gray-900">
       {/* Header */}
-      <header className="w-full px-6 py-4 bg-white shadow flex justify-between items-center">
+      <header className="w-full px-6 py-4 bg-gray shadow flex justify-between items-center">
         <h1 className="text-xl font-bold">Alex Jin – Full Stack Developer</h1>
         <div className="space-x-4 text-sm">
           <a
@@ -86,6 +87,43 @@ export default function Home() {
             Pomodoro Timer App
           </Link>
         </div>
+
+        {/* Technologies section */}
+        <section className="mt-12 w-full text-center">
+          <h3 className="text-xl font-semibold mb-4">Technologies Used</h3>
+          <div className="grid grid-cols-3 gap-8 items-center justify-items-center">
+            {/* React */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/react.svg" alt="React" width={40} height={40} />
+              <span className="text-sm mt-1">React</span>
+            </div>
+            {/* Next.js */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/nextjs.svg" alt="Next.js" width={40} height={40} />
+              <span className="text-sm mt-1">Next.js</span>
+            </div>
+            {/* TypeScript */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/typescript.svg" alt="TypeScript" width={40} height={40} />
+              <span className="text-sm mt-1">TypeScript</span>
+            </div>
+            {/* Tailwind CSS */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/tailwind.svg" alt="Tailwind CSS" width={40} height={40} />
+              <span className="text-sm mt-1">Tailwind</span>
+            </div>
+            {/* APIs */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/api.svg" alt="REST APIs" width={40} height={40} />
+              <span className="text-sm mt-1">REST APIs</span>
+            </div>
+            {/* Vercel */}
+            <div className="flex flex-col items-center">
+              <Image src="/logos/vercel.svg" alt="Vercel" width={40} height={40} />
+              <span className="text-sm mt-1">Vercel</span>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
