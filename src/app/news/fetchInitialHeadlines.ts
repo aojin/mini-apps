@@ -32,19 +32,26 @@ export async function fetchInitialHeadlines(): Promise<InitialData> {
       throw new Error(`Failed to fetch headlines (status ${res.status})`);
     }
 
-    const data = await res.json();
+    const data: { results?: Article[]; nextPage?: string | null } = await res.json();
     lastGoodData = data.results || []; // update cache
 
     return {
       results: data.results || [],
       nextPage: data.nextPage || null,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("fetchInitialHeadlines error:", err);
+    if (err instanceof Error) {
+      return {
+        results: lastGoodData,
+        nextPage: null,
+        error: err.message,
+      };
+    }
     return {
       results: lastGoodData,
       nextPage: null,
-      error: err.message || "Unexpected error",
+      error: "Unexpected error",
     };
   }
 }

@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
-export default function TimerPage() {
-  const WORK_TIME = 25 * 60; // 25 minutes
-  const BREAK_TIME = 5 * 60; // 5 minutes
+const WORK_TIME = 25 * 60; // 25 minutes
+const BREAK_TIME = 5 * 60; // 5 minutes
 
+export default function TimerPage() {
   const [time, setTime] = useState(WORK_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState<"work" | "break">("work");

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image"; // ✅ Next.js optimized image
 
 interface WeatherData {
   name: string;
@@ -46,8 +47,12 @@ export default function WeatherPage() {
       if (!res.ok) throw new Error("City not found");
       const json: WeatherData = await res.json();
       setData(json);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to load weather");
+      }
     }
   }
 
@@ -62,10 +67,10 @@ export default function WeatherPage() {
         `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_KEY}`
       );
       if (!res.ok) throw new Error("Failed to fetch suggestions");
-      const json = await res.json();
+      const json: Favorite[] = await res.json();
       setSuggestions(json);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Failed to fetch suggestions");
     }
   }
 
@@ -80,8 +85,12 @@ export default function WeatherPage() {
       if (!res.ok) throw new Error("City not found");
       const json: WeatherData = await res.json();
       setData(json);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to load weather");
+      }
     }
   }
 
@@ -109,7 +118,7 @@ export default function WeatherPage() {
           const res = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?lat=${fav.lat}&lon=${fav.lon}&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_KEY}&units=metric`
           );
-          const json = await res.json();
+          const json: WeatherData = await res.json();
           results[fav.name] = json;
         } catch {
           console.error("Failed to load favorite:", fav.name);
@@ -131,7 +140,7 @@ export default function WeatherPage() {
       if (!res.ok) throw new Error("City not found");
       const json: WeatherData = await res.json();
       setFavoriteWeather((prev) => ({ ...prev, [fav.name]: json }));
-    } catch (err) {
+    } catch {
       console.error("Failed to refresh favorite:", fav.name);
     }
   }
@@ -140,10 +149,7 @@ export default function WeatherPage() {
     <div className="flex flex-col items-center w-full max-w-md mx-auto mt-10 mb-10 p-6 bg-gray-100 rounded-xl shadow">
       {/* Back button */}
       <div className="self-start mb-4">
-        <Link
-          href="/"
-          className="text-blue-600 hover:underline text-sm"
-        >
+        <Link href="/" className="text-blue-600 hover:underline text-sm">
           ← Back to Mini Apps
         </Link>
       </div>
@@ -159,18 +165,10 @@ export default function WeatherPage() {
           of front-end engineering techniques you’d use in production.
         </p>
         <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
-          <li>
-            <strong>State & Effect hooks</strong> for async data fetching and persistence.
-          </li>
-          <li>
-            <strong>Debounced search + autocomplete</strong> powered by the OpenWeather Geo API.
-          </li>
-          <li>
-            <strong>LocalStorage persistence</strong> to keep favorite cities across refreshes.
-          </li>
-          <li>
-            <strong>Dynamic rendering</strong> of favorite city cards with refresh/remove actions.
-          </li>
+          <li><strong>State & Effect hooks</strong> for async data fetching and persistence.</li>
+          <li><strong>Debounced search + autocomplete</strong> powered by the OpenWeather Geo API.</li>
+          <li><strong>LocalStorage persistence</strong> to keep favorite cities across refreshes.</li>
+          <li><strong>Dynamic rendering</strong> of favorite city cards with refresh/remove actions.</li>
         </ul>
         <p className="mt-2 text-sm text-gray-600">
           🔮 Possible extensions: 5-day forecast, °C/°F toggle, geolocation for current position,
@@ -235,10 +233,12 @@ export default function WeatherPage() {
           <h2 className="text-xl font-semibold">{data.name}</h2>
           <p className="text-lg">{data.main.temp}°C</p>
           <p className="capitalize">{data.weather[0].description}</p>
-          <img
+          <Image
             className="mx-auto mt-2"
             src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`}
             alt="weather icon"
+            width={100}
+            height={100}
           />
         </div>
       )}

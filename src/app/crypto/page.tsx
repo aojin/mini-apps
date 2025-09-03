@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Coin {
   id: string;
@@ -25,8 +26,12 @@ export default function CryptoPage() {
       if (!res.ok) throw new Error("Failed to fetch coins");
       const data: Coin[] = await res.json();
       setCoins(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -34,7 +39,7 @@ export default function CryptoPage() {
 
   useEffect(() => {
     fetchCoins();
-    const interval = setInterval(fetchCoins, 30000); // refresh every 30s
+    const interval = setInterval(fetchCoins, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -54,6 +59,7 @@ export default function CryptoPage() {
         ← Back to Mini Apps
       </Link>
 
+      {/* About box */}
       <div className="mb-6 p-4 w-full bg-green-50 border-l-4 border-green-400 rounded">
         <h2 className="text-lg font-semibold mb-2">About this app</h2>
         <p>
@@ -87,7 +93,13 @@ export default function CryptoPage() {
             key={coin.id}
             className="flex items-center p-4 bg-white rounded shadow"
           >
-            <img src={coin.image} alt={coin.name} className="w-10 h-10 mr-4" />
+            <Image
+              src={coin.image}
+              alt={coin.name}
+              width={40}
+              height={40}
+              className="w-10 h-10 mr-4"
+            />
             <div className="flex-1">
               <h3 className="font-semibold">
                 {coin.name} ({coin.symbol.toUpperCase()})

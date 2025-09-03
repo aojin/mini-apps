@@ -40,27 +40,32 @@ export default function Quiz({ onComplete }: QuizProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://opentdb.com/api.php?amount=5&type=multiple");
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const data = await res.json();
+        const res = await fetch("https://opentdb.com/api.php?amount=5&type=multiple");
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
 
-      if (data.results?.length) {
+        if (data.results?.length) {
         setQuestions(data.results);
         setCurrent(0);
         setScore(0);
         setFinished(false);
         setResults([]);
         setStarted(true);
-      } else {
+        } else {
         throw new Error("No quiz questions returned");
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch quiz:", err);
-      setError(err.message || "Failed to load quiz");
+        }
+    } catch (err: unknown) {
+        console.error("Failed to fetch quiz:", err);
+        if (err instanceof Error) {
+        setError(err.message);
+        } else {
+        setError("Failed to load quiz");
+        }
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }
+    }
+
 
   function shuffleAnswers(q: Question) {
     return [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5);
