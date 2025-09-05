@@ -10,14 +10,14 @@ interface LayoutDefaults {
 
 export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
   text: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-4",
     padding: "p-2",
   },
   email: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-4",
@@ -31,14 +31,14 @@ export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
     padding: "p-2",
   },
   password: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-4",
     padding: "p-2",
   },
   url: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-4",
@@ -80,14 +80,14 @@ export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
     padding: "p-1",
   },
   "radio-group": {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-2",
     padding: "p-1",
   },
   textarea: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-6",

@@ -1,4 +1,3 @@
-// /app/dynamic-form/form/FormCanvas.tsx
 "use client";
 
 import React from "react";
@@ -38,7 +37,7 @@ export default function FormCanvas({
       // Full width spans both → real field left, ghost right
       left.push({ field: { ...f, __full: true } as any, globalIdx });
       right.push({ field: { ...f, __ghost: true } as any, globalIdx });
-      toggle = true; // reset alternation
+      toggle = true;
     } else {
       if (toggle) {
         left.push({ field: f, globalIdx });
@@ -59,46 +58,69 @@ export default function FormCanvas({
     >
       <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
 
-      {/* Two independent column tracks */}
-      <div className="grid md:grid-cols-2 gap-4 items-start">
-        {/* Left column */}
+      {/* Columns */}
+      {previewMode === "sm" ? (
+        // Mobile: collapse into one unified column
         <div className="flex flex-col gap-4">
-          {left.map(({ field, globalIdx }) =>
-            (field as any).__ghost ? null : (
-              <FieldBlock
-                key={field.id}
-                field={field}
-                formData={formData}
-                errors={errors}
-                globalIdx={globalIdx}
-                onChange={onChange}
-                moveField={moveField}
-                deleteField={deleteField}
-                onEdit={onEdit}
-              />
-            )
-          )}
+          {fields.map((field, globalIdx) => (
+            <FieldBlock
+              key={field.id}
+              field={field}
+              formData={formData}
+              errors={errors}
+              globalIdx={globalIdx}
+              onChange={onChange}
+              moveField={moveField}
+              deleteField={deleteField}
+              onEdit={onEdit}
+              previewMode={previewMode}
+            />
+          ))}
         </div>
+      ) : (
+        // Tablet & Desktop: independent left/right tracks
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          {/* Left column */}
+          <div className="flex flex-col gap-4">
+            {left.map(({ field, globalIdx }) =>
+              (field as any).__ghost ? null : (
+                <FieldBlock
+                  key={field.id}
+                  field={field}
+                  formData={formData}
+                  errors={errors}
+                  globalIdx={globalIdx}
+                  onChange={onChange}
+                  moveField={moveField}
+                  deleteField={deleteField}
+                  onEdit={onEdit}
+                  previewMode={previewMode}
+                />
+              )
+            )}
+          </div>
 
-        {/* Right column */}
-        <div className="flex flex-col gap-4">
-          {right.map(({ field, globalIdx }) =>
-            (field as any).__ghost ? null : (
-              <FieldBlock
-                key={field.id}
-                field={field}
-                formData={formData}
-                errors={errors}
-                globalIdx={globalIdx}
-                onChange={onChange}
-                moveField={moveField}
-                deleteField={deleteField}
-                onEdit={onEdit}
-              />
-            )
-          )}
+          {/* Right column */}
+          <div className="flex flex-col gap-4">
+            {right.map(({ field, globalIdx }) =>
+              (field as any).__ghost ? null : (
+                <FieldBlock
+                  key={field.id}
+                  field={field}
+                  formData={formData}
+                  errors={errors}
+                  globalIdx={globalIdx}
+                  onChange={onChange}
+                  moveField={moveField}
+                  deleteField={deleteField}
+                  onEdit={onEdit}
+                  previewMode={previewMode}
+                />
+              )
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Submit + Reset */}
       <div className="mt-6 flex gap-4">
@@ -129,12 +151,15 @@ function FieldBlock({
   moveField,
   deleteField,
   onEdit,
+  previewMode,
 }: any) {
   return (
     <div
-      className={`${(field as any).__full ? "md:col-span-2" : ""} flex flex-col items-start justify-start`}
+      className={`flex flex-col items-start justify-start ${
+        previewMode === "sm" || (field as any).__full ? "w-full" : ""
+      }`}
     >
-      {/* Wrapper ensures alignment */}
+      {/* Field wrapper */}
       <div className="w-full [&>input]:align-top [&>textarea]:align-top [&>select]:align-top">
         <FieldRenderer
           field={field}

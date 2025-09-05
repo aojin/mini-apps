@@ -28,11 +28,10 @@ export default function FieldBuilder({
   const resetBuilderForm = () => {
     setNewField({
       id: 0,
-      type: "" as any,
+      type: "" as any, // start empty
       label: "",
       name: "",
-      ...LayoutConfig["text"],
-      layout: "full", // default to full
+      ...LayoutConfig["text"], // fallback to "text" defaults
       maskType: undefined,
       pattern: undefined,
       maxlength: undefined,
@@ -57,13 +56,13 @@ export default function FieldBuilder({
       return false;
     }
 
-    // 🚨 Prevent duplicate names (ignore current editing field)
+    // Prevent duplicate names (ignore current editing field)
     if (fields.some((f) => f.name === newField.name && f.id !== newField.id)) {
       setError(`Field name "${newField.name}" is already in use.`);
       return false;
     }
 
-    // 🚨 Enforce options rules
+    // Enforce option rules
     if (newField.type === "radio-group") {
       if (!newField.options || newField.options.length < 2) {
         setError("Radio groups must have at least 2 options.");
@@ -95,48 +94,37 @@ export default function FieldBuilder({
   // ─── Handle type change ───
   const handleTypeChange = (newType: FieldType | "") => {
     if (!newType) {
-      setNewField({
-        ...newField,
-        type: "" as any,
-        maskType: undefined,
-        pattern: undefined,
-        maxlength: undefined,
-        placeholder: "",
-        options: undefined,
-        layout: "full",
-      });
+      resetBuilderForm();
       return;
     }
 
     setNewField({
-  ...newField,
-  type: newType,
-  ...LayoutConfig[newType], // may contain its own layout
-  layout: "full",           // always enforce full when switching type
-  maskType: undefined,
-  pattern: undefined,
-  maxlength: undefined,
-  placeholder: "",
-  ...(newType === "radio-group"
-    ? {
-        options: [
-          { label: "Option 1", value: "opt1" },
-          { label: "Option 2", value: "opt2" },
-        ],
-        orientation: "vertical",
-      }
-    : newType === "checkbox"
-    ? {
-        options: [{ label: "Option 1", value: "opt1" }],
-        orientation: "vertical",
-      }
-    : newType === "select"
-    ? {
-        options: [{ label: "Option 1", value: "opt1" }],
-      }
-    : {}),
-});
-
+      ...newField,
+      type: newType,
+      ...LayoutConfig[newType], // ← respects default layout
+      maskType: undefined,
+      pattern: undefined,
+      maxlength: undefined,
+      placeholder: "",
+      ...(newType === "radio-group"
+        ? {
+            options: [
+              { label: "Option 1", value: "opt1" },
+              { label: "Option 2", value: "opt2" },
+            ],
+            orientation: "vertical",
+          }
+        : newType === "checkbox"
+        ? {
+            options: [{ label: "Option 1", value: "opt1" }],
+            orientation: "vertical",
+          }
+        : newType === "select"
+        ? {
+            options: [{ label: "Option 1", value: "opt1" }],
+          }
+        : {}),
+    });
   };
 
   // ─── Disable save button if incomplete ───
@@ -228,29 +216,29 @@ export default function FieldBuilder({
         </div>
       </div>
 
-      {/* ─── Options builder (checkbox, radio, select) ─── */}
+      {/* Options builder (checkbox, radio, select) */}
       {["checkbox", "radio-group", "select"].includes(newField.type) && (
         <OptionsBuilder field={newField} setField={setNewField} />
       )}
 
-      {/* ─── Masking (text-like) ─── */}
+      {/* Masking */}
       {newField.type && (
         <MaskingBuilder field={newField} setField={setNewField} />
       )}
 
-      {/* ─── Validation rules ─── */}
+      {/* Validation */}
       {newField.type && (
         <ValidationBuilder field={newField} setField={setNewField} />
       )}
 
-      {/* ─── Error display ─── */}
+      {/* Error display */}
       {error && (
         <p className="text-red-600 text-sm font-medium border border-red-300 bg-red-50 px-3 py-2 rounded">
           {error}
         </p>
       )}
 
-      {/* ─── Actions ─── */}
+      {/* Actions */}
       <div className="flex gap-3">
         <button
           type="button"
