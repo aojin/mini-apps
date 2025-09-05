@@ -28,7 +28,11 @@ export type MaskType =
   | "tel"
   | "email"
   | "url"
-  | "alpha"    
+  | "currency"
+  | "decimal"
+  | "time"
+  | "alphanumeric"
+  | "slug"
   | "custom";
 
 export interface FieldConfig {
@@ -38,41 +42,64 @@ export interface FieldConfig {
   name: string;
   layout?: "full" | "half";
 
-  // ─── Layout styling ───
+  // Layout
   align?: "start" | "center" | "end";
   justify?: "start" | "center" | "end" | "between";
-  margin?: string;  // Tailwind margin classes like "m-2" or "mt-4"
-  padding?: string; // Tailwind padding classes like "p-2" or "px-4"
+  margin?: string;
+  padding?: string;
 
-  // ─── Common ───
+  // Common
   required?: boolean;
   placeholder?: string;
 
-  // ─── Text-like ───
+  // Text / input-like fields
   minlength?: number;
   maxlength?: number;
-
-  // Regex pattern for validation (not formatting)
+  exactLength?: number;
   pattern?: string;
-
-  // Masking (applies live as user types)
   maskType?: MaskType;
 
-  // ─── Number / Date ───
-  min?: number | string;
-  max?: number | string;
-  step?: number | "any";
+  // Character restrictions
+  alphaOnly?: boolean;
+  noWhitespace?: boolean;
+  uppercaseOnly?: boolean;
+  lowercaseOnly?: boolean;
 
-  // ─── Checkbox / Radio / Select ───
+  // Extra validation
+  startsWith?: string;
+  endsWith?: string;
+  contains?: string;
+  minWords?: number;
+  maxWords?: number;
+  allowedValues?: string[];
+  disallowedValues?: string[];
+  matchField?: string;
+  customErrorMessage?: string;
+
+  // Number
+  minValue?: number;
+  maxValue?: number;
+  step?: number | "any";
+  noNegative?: boolean;
+  positiveOnly?: boolean;
+  integerOnly?: boolean;
+  decimalPlaces?: number;
+
+  // Dates
+  minDate?: string; // "YYYY-MM-DD" or ISO datetime
+  maxDate?: string;
+
+  // Checkbox / Radio / Select
   options?: FieldOption[];
   orientation?: "vertical" | "horizontal";
   isMulti?: boolean;
 
-  // ─── File ───
+  // File
   accept?: string;
   multiple?: boolean;
+  maxFileSizeMB?: number;
 
-  // ─── Textarea ───
+  // Textarea
   rows?: number;
   cols?: number;
 }

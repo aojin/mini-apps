@@ -16,6 +16,20 @@ export default function Page() {
   );
 }
 
+// ─── Default Value Helper ───
+function computeDefaultValue(field: FieldConfig): string {
+  if (field.type === "select" || field.type === "radio-group") {
+    return field.options?.find((o) => o.default)?.value ?? "";
+  }
+  if (field.type === "checkbox") {
+    const checkedVals = (field.options ?? [])
+      .filter((o) => o.checked)
+      .map((o) => o.value);
+    return checkedVals.join(",");
+  }
+  return "";
+}
+
 function DynamicFormBuilder() {
   const { addToast } = useToast();
 
@@ -27,23 +41,59 @@ function DynamicFormBuilder() {
   const [previewWidth, setPreviewWidth] = useState<"sm" | "md" | "lg">("lg");
   const [isMobile, setIsMobile] = useState(false);
 
-  const [newField, setNewField] = useState<FieldConfig>({
+  // ─── Default Field Template ───
+  const defaultField: FieldConfig = {
     id: 0,
-    type: "" as any, // 👈 start empty until user picks
+    type: "" as any,
     label: "",
     name: "",
     ...LayoutConfig["text"],
     layout: "full",
+    // masks
     maskType: undefined,
     pattern: undefined,
-    maxlength: undefined,
     placeholder: "",
+    maxlength: undefined,
+    // validation
+    minlength: undefined,
+    exactLength: undefined,
+    startsWith: undefined,
+    endsWith: undefined,
+    contains: undefined,
+    minWords: undefined,
+    maxWords: undefined,
+    allowedValues: undefined,
+    disallowedValues: undefined,
+    matchField: undefined,
+    customErrorMessage: undefined,
+    // numbers
+    minValue: undefined,
+    maxValue: undefined,
+    step: undefined,
+    noNegative: undefined,
+    positiveOnly: undefined,
+    integerOnly: undefined,
+    decimalPlaces: undefined,
+    // dates
+    minDate: undefined,
+    maxDate: undefined,
+    // checkbox/radio/select
     options: undefined,
-  });
+    orientation: "vertical",
+    isMulti: undefined,
+    // file
+    accept: undefined,
+    multiple: undefined,
+    maxFileSizeMB: undefined,
+    // textarea
+    rows: undefined,
+    cols: undefined,
+  };
 
+  const [newField, setNewField] = useState<FieldConfig>(defaultField);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
 
-  // ─── Detect screen width for mobile vs desktop ───
+  // ─── Detect screen width ───
   useEffect(() => {
     const checkSize = () => {
       const mobile = window.innerWidth < 640;
@@ -57,19 +107,7 @@ function DynamicFormBuilder() {
 
   // ─── Reset builder form ───
   const resetBuilderForm = () => {
-    setNewField({
-      id: 0,
-      type: "" as any,
-      label: "",
-      name: "",
-      ...LayoutConfig["text"],
-      layout: "full",
-      maskType: undefined,
-      pattern: undefined,
-      maxlength: undefined,
-      placeholder: "",
-      options: undefined,
-    });
+    setNewField({ ...defaultField });
     setEditingFieldId(null);
   };
 
@@ -78,7 +116,15 @@ function DynamicFormBuilder() {
     if (!newField.label.trim() || !newField.name.trim() || !newField.type) return;
     setCounter((c) => {
       const id = c + 1;
-      setFields([...fields, { ...newField, id }]);
+      const f = { ...newField, id };
+      setFields([...fields, f]);
+
+      // ✅ seed default value into formData
+      const defVal = computeDefaultValue(f);
+      if (defVal) {
+        setFormData((prev) => ({ ...prev, [f.name]: defVal }));
+      }
+
       return id;
     });
     resetBuilderForm();
@@ -92,6 +138,13 @@ function DynamicFormBuilder() {
         f.id === editingFieldId ? { ...newField, id: editingFieldId } : f
       )
     );
+
+    // ✅ seed default on update too
+    const defVal = computeDefaultValue(newField);
+    if (defVal) {
+      setFormData((prev) => ({ ...prev, [newField.name]: defVal }));
+    }
+
     resetBuilderForm();
   };
 
@@ -137,22 +190,43 @@ function DynamicFormBuilder() {
   };
 
   // ─── Track form input ───
-  const handleChange = (field: FieldConfig, value: string) => {
-    setFormData({ ...formData, [field.name]: value });
-    const error = runValidators(value, field);
-    setErrors((prev) => ({ ...prev, [field.name]: error }));
+  const handleChange = (
+    field: FieldConfig,
+    value: string,
+    error?: string | null
+  ) => {
+    setFormData((prev) => ({ ...prev, [field.name]: value }));
+    setErrors((prev) => ({ ...prev, [field.name]: error ?? null }));
   };
 
-  // ─── Submit form ───
+  // ─── Submit ───
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let newErrors: Record<string, string | null> = {};
     let hasError = false;
 
+    // First pass
     fields.forEach((f) => {
-      const error = runValidators(formData[f.name] || "", f);
-      newErrors[f.name] = error;
-      if (error) hasError = true;
+      let val = formData[f.name] || "";
+      if (!val) {
+        // ✅ fallback to defaults at submit time
+        val = computeDefaultValue(f);
+      }
+      const err = runValidators(val, f, { ...formData, [f.name]: val }, fields);
+      if (err) hasError = true;
+      newErrors[f.name] = err;
+    });
+
+    // Second pass (matchField)
+    fields.forEach((f) => {
+      if (f.matchField) {
+        const val = formData[f.name] || "";
+        const err = runValidators(val, f, formData, fields);
+        if (err) {
+          hasError = true;
+          newErrors[f.name] = err;
+        }
+      }
     });
 
     setErrors(newErrors);
@@ -166,19 +240,19 @@ function DynamicFormBuilder() {
     console.log("Form Data:", formData);
   };
 
-  // ─── Reset form data ───
+  // ─── Reset ───
   const handleReset = () => {
     const clearedData: Record<string, string> = {};
     const clearedErrors: Record<string, string | null> = {};
     fields.forEach((f) => {
-      clearedData[f.name] = "";
+      const defVal = computeDefaultValue(f);
+      clearedData[f.name] = defVal;
       clearedErrors[f.name] = null;
     });
     setFormData(clearedData);
     setErrors(clearedErrors);
   };
 
-  // ─── Render ───
   return (
     <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
       <h1 className="text-3xl font-bold text-center mb-6">
@@ -198,10 +272,9 @@ function DynamicFormBuilder() {
           />
         </div>
 
-        {/* Preview section */}
+        {/* Preview */}
         {fields.length > 0 && (
           <div className="flex flex-col items-center w-full overflow-visible">
-            {/* Preview controls */}
             <div className="flex gap-2 mb-4 justify-center">
               <button
                 type="button"
@@ -243,7 +316,6 @@ function DynamicFormBuilder() {
               )}
             </div>
 
-            {/* Preview container */}
             <div
               className={`border rounded bg-gray-50 p-4 transition-all w-full overflow-visible ${
                 previewWidth === "sm"
@@ -264,6 +336,9 @@ function DynamicFormBuilder() {
                 onEdit={handleEdit}
                 previewMode={previewWidth}
                 onReset={handleReset}
+                isEditing={editingFieldId !== null}
+                editingFieldId={editingFieldId ?? undefined}
+                resetBuilderForm={resetBuilderForm}
               />
             </div>
           </div>

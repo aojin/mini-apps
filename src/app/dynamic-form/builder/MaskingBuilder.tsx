@@ -16,11 +16,6 @@ export default function MaskingBuilder({
     let placeholder: string | undefined;
 
     switch (maskType) {
-      case "alpha":
-        pattern = "^[A-Za-z]+$";
-        placeholder = "Letters only";
-        // don't force a maxlength, but allow editing below
-        break;
       case "creditCard":
         pattern = "^\\d{4}\\s\\d{4}\\s\\d{4}\\s\\d{4}$";
         maxlength = 19;
@@ -41,10 +36,34 @@ export default function MaskingBuilder({
         maxlength = 10;
         placeholder = "12345-6789";
         break;
+      case "currency":
+        pattern = "^\\$?\\d+(,\\d{3})*(\\.\\d{2})?$";
+        placeholder = "$1,234.56";
+        break;
+      case "decimal":
+        pattern = "^\\d+(\\.\\d+)?$";
+        placeholder = "123.45";
+        break;
+      case "time":
+        pattern = "^([01]?\\d|2[0-3]):[0-5]\\d$";
+        placeholder = "HH:mm (24h)";
+        break;
+      case "alphanumeric":
+        pattern = "^[A-Za-z0-9]+$";
+        placeholder = "abc123";
+        break;
+      case "slug":
+        pattern = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
+        placeholder = "my-custom-slug";
+        break;
+      case "custom":
+        pattern = field.pattern || "";
+        placeholder = field.placeholder || "";
+        break;
       default:
         pattern = undefined;
         maxlength = undefined;
-        placeholder = ""; // 🧹 reset when "None"
+        placeholder = "";
     }
 
     setField({
@@ -85,13 +104,10 @@ export default function MaskingBuilder({
     }
   }, [field.type]);
 
-  const isPresetSelected = !!field.maskType;
-
-  // 🎯 Only show card if masking applies
+  const isPresetSelected = !!field.maskType && field.maskType !== "custom";
   const supportsMasking = ["text", "tel", "email", "url", "textarea"].includes(
     field.type
   );
-
   if (!supportsMasking) return null;
 
   return (
@@ -110,39 +126,37 @@ export default function MaskingBuilder({
             onChange={(e) => handleMaskChange(e.target.value as MaskType)}
           >
             <option value="">None</option>
-            <option value="alpha">Alpha Only</option>
             <option value="creditCard">Credit Card</option>
             <option value="ssn">SSN</option>
             <option value="zip">ZIP Code</option>
             <option value="usPostal">US Postal</option>
+            <option value="currency">Currency</option>
+            <option value="decimal">Decimal Number</option>
+            <option value="time">Time (HH:mm)</option>
+            <option value="alphanumeric">Alphanumeric</option>
+            <option value="slug">Slug (kebab-case)</option>
+            <option value="custom">Custom (manual regex)</option>
           </select>
         </div>
       )}
 
-      {/* Max length — allow for alpha and for non-preset text/textarea */}
-      {((field.maskType === "alpha") ||
-        (!isPresetSelected && ["text", "textarea"].includes(field.type))) && (
-        <div>
+      {/* Custom regex input if "custom" mask selected */}
+      {field.maskType === "custom" && (
+        <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-600 mb-1">
-            Maximum characters (hard limit)
+            Custom Regex Pattern
           </label>
           <input
-            type="number"
+            type="text"
             className="border p-2 rounded w-full"
-            value={field.maxlength ?? ""}
-            onChange={(e) =>
-              setField({
-                ...field,
-                maxlength: e.target.value
-                  ? Number(e.target.value)
-                  : undefined,
-              })
-            }
+            placeholder="Enter regex (e.g. ^[A-Z]{3}\\d{2}$)"
+            value={field.pattern ?? ""}
+            onChange={(e) => setField({ ...field, pattern: e.target.value })}
           />
         </div>
       )}
 
-      {/* Placeholder (always editable, descriptive helper only in builder UI) */}
+      {/* Placeholder (always editable) */}
       <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">
           Placeholder
@@ -155,6 +169,32 @@ export default function MaskingBuilder({
           onChange={(e) => setField({ ...field, placeholder: e.target.value })}
         />
       </div>
+
+      {/* Character restriction checkboxes (only if no preset mask) */}
+      {!isPresetSelected && field.maskType !== "custom" && (
+        <div className="flex flex-wrap gap-4 text-sm text-blue-700">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={field.alphaOnly || false}
+              onChange={(e) =>
+                setField({ ...field, alphaOnly: e.target.checked })
+              }
+            />
+            Alpha only (A–Z)
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={field.noWhitespace || false}
+              onChange={(e) =>
+                setField({ ...field, noWhitespace: e.target.checked })
+              }
+            />
+            No whitespace (single word)
+          </label>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,12 +12,20 @@ export default function OptionsBuilder({
 }) {
   if (!["checkbox", "radio-group", "select"].includes(field.type)) return null;
 
-  const updateOption = (idx: number, key: keyof FieldOption, val: string | boolean) => {
+  const updateOption = (
+    idx: number,
+    key: keyof FieldOption,
+    val: string | boolean
+  ) => {
     const updated = [...(field.options || [])];
     updated[idx] = { ...updated[idx], [key]: val };
 
     // enforce single default for radio/select
-    if (key === "default" && val === true && ["radio-group", "select"].includes(field.type)) {
+    if (
+      key === "default" &&
+      val === true &&
+      ["radio-group", "select"].includes(field.type)
+    ) {
       updated.forEach((o, i) => {
         if (i !== idx) o.default = false;
       });
@@ -67,7 +75,9 @@ export default function OptionsBuilder({
                 name={`orientation-${field.id}`}
                 value="horizontal"
                 checked={field.orientation === "horizontal"}
-                onChange={() => setField({ ...field, orientation: "horizontal" })}
+                onChange={() =>
+                  setField({ ...field, orientation: "horizontal" })
+                }
               />
               Horizontal
             </label>
@@ -94,16 +104,21 @@ export default function OptionsBuilder({
               onChange={(e) => updateOption(i, "value", e.target.value)}
             />
 
+            {/* Checkbox = can have multiple checked */}
             {field.type === "checkbox" && (
               <label className="flex items-center gap-1">
                 <input
                   type="checkbox"
                   checked={opt.checked || false}
-                  onChange={(e) => updateOption(i, "checked", e.target.checked)}
+                  onChange={(e) =>
+                    updateOption(i, "checked", e.target.checked)
+                  }
                 />
-                Default
+                Checked
               </label>
             )}
+
+            {/* Radio/Select = only one default */}
             {["radio-group", "select"].includes(field.type) && (
               <label className="flex items-center gap-1">
                 <input

@@ -1,16 +1,16 @@
+// /form/FieldRenderer.tsx
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FieldConfig } from "../builder/FieldConfig";
+import { runValidators } from "./Validation";
 
-// ─── Live Mask Formatting ───
-function applyMask(value: string, maskType?: string): string {
+// ─── Mask Formatting ───
+function applyMask(value: string, maskType?: string, customPattern?: string): string {
   if (!maskType) return value;
   const digits = value.replace(/\D/g, "");
 
   switch (maskType) {
-    case "alpha":
-      return value.replace(/[^A-Za-z]/g, "");
     case "creditCard":
       return digits.slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
     case "ssn":
@@ -22,28 +22,71 @@ function applyMask(value: string, maskType?: string): string {
     case "zip":
       return digits.slice(0, 5);
     case "usPostal":
-      return digits
-        .slice(0, 9)
-        .replace(/(\d{5})(\d{1,4})?/, (_, a, b) => (b ? `${a}-${b}` : a));
+      return digits.slice(0, 9).replace(/(\d{5})(\d{1,4})?/, (_, a, b) =>
+        b ? `${a}-${b}` : a
+      );
     case "tel":
       return digits
         .slice(0, 10)
         .replace(/(\d{3})(\d{3})(\d{1,4})?/, (_, a, b, c) =>
           c ? `(${a}) ${b}-${c}` : b ? `(${a}) ${b}` : a
         );
+    case "currency": {
+      const cleaned = value.replace(/[^\d.]/g, "");
+      const num = parseFloat(cleaned || "0");
+      if (isNaN(num)) return "";
+      return `$${num.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+    case "decimal":
+      return value.replace(/[^0-9.]/g, "");
+    case "time": {
+      const clean = value.replace(/[^0-9]/g, "").slice(0, 4);
+      if (clean.length <= 2) return clean;
+      return `${clean.slice(0, 2)}:${clean.slice(2)}`;
+    }
+    case "alphanumeric":
+      return value.replace(/[^A-Za-z0-9]/g, "");
+    case "slug":
+      return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    case "custom":
+      if (!customPattern) return value;
+      try {
+        const regex = new RegExp(customPattern);
+        return regex.test(value) ? value : value; // only validate
+      } catch {
+        return value;
+      }
     default:
       return value;
   }
 }
 
-// ─── Normalize Date Values ───
+// ─── Normalize Date ───
 function normalizeDate(val: string | undefined, type: string): string {
   if (!val) return "";
-  if (type === "date") {
-    return /^\d{4}-\d{2}-\d{2}$/.test(val) ? val : "";
-  }
-  if (type === "datetime-local") {
+  if (type === "date") return /^\d{4}-\d{2}-\d{2}$/.test(val) ? val : "";
+  if (type === "datetime-local")
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val) ? val : "";
+  return "";
+}
+
+// ─── Compute initial (default) value from options ───
+function computeDefaultValue(field: FieldConfig): string {
+  if (field.type === "select" || field.type === "radio-group") {
+    const def = field.options?.find((o) => o.default)?.value;
+    return def ?? "";
+  }
+  if (field.type === "checkbox") {
+    const checkedVals = (field.options ?? [])
+      .filter((o) => o.checked)
+      .map((o) => o.value);
+    return checkedVals.length ? checkedVals.join(",") : "";
   }
   return "";
 }
@@ -52,43 +95,70 @@ export default function FieldRenderer({
   field,
   value,
   error,
+  context,
+  allFields,
   onChange,
 }: {
   field: FieldConfig;
   value: string;
   error?: string | null;
-  onChange: (val: string) => void;
+  context?: Record<string, string>;
+  allFields: FieldConfig[];
+  onChange: (val: string, error?: string | null) => void;
 }) {
-  const isTextLike = !["checkbox", "radio-group", "select"].includes(field.type);
+  const [localError, setLocalError] = useState<string | null>(error || null);
 
-  // Shared input class for consistent alignment
-   const baseInputClass =
-    "block w-full border rounded px-3 py-2 align-top leading-normal " +
-    (error ? "border-red-500" : "border-gray-300");
+  useEffect(() => {
+    setLocalError(error || null);
+  }, [error]);
+
+  // ✅ Seed defaults once on mount
+  useEffect(() => {
+    if (!value && (field.type === "select" || field.type === "radio-group" || field.type === "checkbox")) {
+      const defVal = computeDefaultValue(field);
+      if (defVal) {
+        const validationError = runValidators(defVal, field, context, allFields);
+        setLocalError(validationError);
+        onChange(defVal, validationError);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field.id]);
+
+  const baseInputClass =
+    "block w-full border rounded px-3 py-2 leading-normal " +
+    (localError ? "border-red-500" : "border-gray-300");
 
   const handleChange = (raw: string) => {
-    if (
-      field.type === "date" ||
-      field.type === "datetime-local" ||
-      field.type === "number"
-    ) {
-      onChange(raw);
-      return;
+    let val = raw;
+
+    // simple restrictions
+    if (field.alphaOnly) val = val.replace(/[^A-Za-z]/g, "");
+    if (field.noWhitespace) val = val.replace(/\s+/g, "");
+
+    // textarea maxlength enforcement
+    if (field.type === "textarea" && field.maxlength !== undefined) {
+      val = val.slice(0, field.maxlength);
     }
-    const masked = applyMask(raw, field.maskType);
-    onChange(masked);
+
+    // apply masks (skip date/number/textarea)
+    if (!["date", "datetime-local", "number", "textarea"].includes(field.type)) {
+      val = applyMask(val, field.maskType, field.pattern);
+    }
+
+    const validationError = runValidators(val, field, context, allFields);
+    setLocalError(validationError);
+    onChange(val, validationError);
   };
 
+  // ─── Render UI ───
   return (
-    <div className="flex flex-col items-start justify-start">
-      {/* ✅ Fixed label height for row consistency */}
+    <div className="flex flex-col items-start">
       {field.label && (
-        <label className="block font-medium text-sm h-6 flex items-center leading-none mb-2">
-          {field.label}
-        </label>
+        <label className="block font-medium text-sm mb-2">{field.label}</label>
       )}
 
-      {/* ✅ Textarea */}
+      {/* ─── Textarea ─── */}
       {field.type === "textarea" ? (
         <textarea
           name={field.name}
@@ -98,82 +168,100 @@ export default function FieldRenderer({
           rows={field.rows}
           cols={field.cols}
           placeholder={field.placeholder}
+          maxLength={field.maxlength}
         />
-      ) : /* ✅ Select */ field.type === "select" && field.options ? (
-        <select
-          name={field.name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={baseInputClass}
-        >
-          <option value="">-- Select an option --</option>
-          {field.options.map((opt, i) => (
-            <option key={i} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      ) : /* ✅ Checkbox group */ field.type === "checkbox" && field.options ? (
+      ) : /* ─── Select ─── */
+field.type === "select" && field.options ? (
+  <select
+    name={field.name}
+    value={
+      field.multiple
+        ? value.split(",").filter(Boolean)
+        : value
+    }
+    onChange={(e) => {
+      if (field.multiple) {
+        const selected = Array.from(e.target.selectedOptions).map(
+          (opt) => opt.value
+        );
+        handleChange(selected.join(","));
+      } else {
+        handleChange(e.target.value);
+      }
+    }}
+    className={`${baseInputClass} ${field.multiple ? "min-h-[6rem]" : ""}`}
+    multiple={field.multiple}
+    size={field.multiple ? Math.min(field.options.length, 4) : undefined} // 👈 show multiple rows
+  >
+    {!field.multiple && <option value="">-- Select --</option>}
+    {field.options.map((opt, i) => (
+      <option key={i} value={opt.value}>
+        {opt.label}
+      </option>
+    ))}
+  </select>
+) : /* ─── Checkbox group ─── */ field.type === "checkbox" && field.options ? (
         <div
           className={
             field.orientation === "horizontal"
-              ? "flex flex-wrap gap-x-4 gap-y-2 min-h-[2.5rem]" // horizontal: wrap, match input height baseline
-              : "flex flex-col gap-2" // vertical: expand column like textarea
+              ? "flex gap-4"
+              : "flex flex-col gap-2"
           }
         >
           {field.options.map((opt, i) => {
+            // ✅ now only use `value` for state
             const selected = value ? value.split(",") : [];
             const isChecked = selected.includes(opt.value);
+
             return (
-              <label key={i} className="flex items-center gap-2 leading-none">
+              <label key={i} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  name={field.name}
                   value={opt.value}
                   checked={isChecked}
                   onChange={(e) => {
                     let updated = [...selected];
                     if (e.target.checked) {
-                      updated.push(opt.value);
+                      if (!updated.includes(opt.value)) updated.push(opt.value);
                     } else {
                       updated = updated.filter((v) => v !== opt.value);
                     }
-                    onChange(updated.join(","));
+                    handleChange(updated.join(","));
                   }}
                 />
-                <span>{opt.label}</span>
+                {opt.label}
               </label>
             );
           })}
         </div>
-      ) : /* ✅ Radio group */ field.type === "radio-group" && field.options ? (
+      ) : /* ─── Radio group ─── */ field.type === "radio-group" && field.options ? (
         <div
           className={
             field.orientation === "horizontal"
-              ? "flex flex-wrap gap-x-4 gap-y-2 min-h-[2.5rem]"
+              ? "flex gap-4"
               : "flex flex-col gap-2"
           }
         >
           {field.options.map((opt, i) => (
-            <label key={i} className="flex items-center gap-2 leading-none">
+            <label key={i} className="flex items-center gap-2">
               <input
                 type="radio"
                 name={field.name}
                 value={opt.value}
                 checked={value === opt.value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(e) => handleChange(e.target.value)}
               />
-              <span>{opt.label}</span>
+              {opt.label}
             </label>
           ))}
         </div>
       ) : (
-        /* ✅ Generic input */
+        // ─── Generic input ───
         <input
           type={field.type}
           name={field.name}
           value={
-            field.type === "date" || field.type === "datetime-local"
+            ["date", "datetime-local"].includes(field.type)
               ? normalizeDate(value, field.type)
               : value
           }
@@ -181,14 +269,18 @@ export default function FieldRenderer({
           className={baseInputClass}
           placeholder={field.placeholder}
           min={
-            field.type === "date" || field.type === "datetime-local"
-              ? normalizeDate(field.min as string, field.type)
-              : field.min
+            field.type === "number"
+              ? field.minValue
+              : field.type.startsWith("date")
+              ? (field.minDate as string)
+              : undefined
           }
           max={
-            field.type === "date" || field.type === "datetime-local"
-              ? normalizeDate(field.max as string, field.type)
-              : field.max
+            field.type === "number"
+              ? field.maxValue
+              : field.type.startsWith("date")
+              ? (field.maxDate as string)
+              : undefined
           }
           step={field.step}
           minLength={field.minlength}
@@ -199,7 +291,9 @@ export default function FieldRenderer({
         />
       )}
 
-      {error && <span className="text-sm text-red-600 mt-1">{error}</span>}
+      {localError && (
+        <span className="text-sm text-red-600 mt-1">{localError}</span>
+      )}
     </div>
   );
 }
