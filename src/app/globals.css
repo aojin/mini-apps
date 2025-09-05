@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+form label {
+  min-height: 1.5rem; /* matches h-6 */
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem; /* matches Tailwind text-sm */
+  line-height: 1;      /* equivalent to leading-none */
+}
