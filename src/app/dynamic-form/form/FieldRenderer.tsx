@@ -62,8 +62,8 @@ export default function FieldRenderer({
   const isTextLike = !["checkbox", "radio-group", "select"].includes(field.type);
 
   // Shared input class for consistent alignment
-  const baseInputClass =
-    "block w-full border p-2 rounded align-top " +
+   const baseInputClass =
+    "block w-full border rounded px-3 py-2 align-top leading-normal " +
     (error ? "border-red-500" : "border-gray-300");
 
   const handleChange = (raw: string) => {
@@ -94,7 +94,7 @@ export default function FieldRenderer({
           name={field.name}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
-          className={baseInputClass}
+          className={`${baseInputClass} resize-y`}
           rows={field.rows}
           cols={field.cols}
           placeholder={field.placeholder}

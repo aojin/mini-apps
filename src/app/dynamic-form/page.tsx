@@ -180,14 +180,14 @@ function DynamicFormBuilder() {
 
   // ─── Render ───
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
       <h1 className="text-3xl font-bold text-center mb-6">
         Dynamic Form Builder
       </h1>
 
-      <div className="mx-auto w-full max-w-[1280px] space-y-8">
+      <div className="mx-auto w-full max-w-[1280px] space-y-8 overflow-visible">
         {/* Builder */}
-        <div className="w-full">
+        <div className="w-full overflow-visible">
           <FieldBuilder
             newField={newField}
             setNewField={setNewField}
@@ -200,7 +200,7 @@ function DynamicFormBuilder() {
 
         {/* Preview section */}
         {fields.length > 0 && (
-          <div className="flex flex-col items-center w-full">
+          <div className="flex flex-col items-center w-full overflow-visible">
             {/* Preview controls */}
             <div className="flex gap-2 mb-4 justify-center">
               <button
@@ -245,7 +245,7 @@ function DynamicFormBuilder() {
 
             {/* Preview container */}
             <div
-              className={`border rounded bg-gray-50 p-4 transition-all w-full ${
+              className={`border rounded bg-gray-50 p-4 transition-all w-full overflow-visible ${
                 previewWidth === "sm"
                   ? "max-w-[375px]"
                   : previewWidth === "md"

@@ -133,18 +133,18 @@ export default function FieldBuilder({
 
   // ─── Render ───
   return (
-    <div className="bg-white p-6 rounded-2xl shadow mb-8 space-y-4 w-full">
+    <div className="bg-white p-6 rounded-2xl shadow mb-8 space-y-4 w-full overflow-visible">
       <h2 className="text-xl font-semibold">
         {isEditing ? "Edit Field" : "Add Field"}
       </h2>
 
       {/* ─── Basic setup inputs ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
         {/* Field type */}
-        <div>
+        <div className="overflow-visible">
           <label className="block text-sm font-medium mb-1">Type</label>
           <select
-            className="border p-2 rounded w-full"
+            className="border rounded w-full px-3 py-2 leading-normal"
             value={newField.type || ""}
             onChange={(e) => handleTypeChange(e.target.value as FieldType)}
           >
@@ -166,10 +166,10 @@ export default function FieldBuilder({
         </div>
 
         {/* Layout */}
-        <div>
+        <div className="overflow-visible">
           <label className="block text-sm font-medium mb-1">Layout</label>
           <select
-            className="border p-2 rounded w-full"
+            className="border rounded w-full px-3 py-2 leading-normal"
             value={newField.layout || "full"}
             onChange={(e) =>
               setNewField({
@@ -188,7 +188,7 @@ export default function FieldBuilder({
           <label className="block text-sm font-medium mb-1">Name (key)</label>
           <input
             type="text"
-            className={`border p-2 rounded w-full ${
+            className={`border rounded w-full px-3 py-2 leading-normal ${
               error?.includes("Name") || error?.includes("in use")
                 ? "border-red-500"
                 : ""
@@ -205,7 +205,7 @@ export default function FieldBuilder({
           <label className="block text-sm font-medium mb-1">Label</label>
           <input
             type="text"
-            className={`border p-2 rounded w-full ${
+            className={`border rounded w-full px-3 py-2 leading-normal ${
               error?.includes("Label") ? "border-red-500" : ""
             }`}
             value={newField.label}

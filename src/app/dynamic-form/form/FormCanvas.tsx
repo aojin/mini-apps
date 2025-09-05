@@ -27,28 +27,54 @@ export default function FormCanvas({
   onEdit: (field: FieldConfig) => void;
   previewMode: "sm" | "md" | "lg";
 }) {
-  // Split fields into left/right "tracks"
-  const left: { field: FieldConfig; globalIdx: number }[] = [];
-  const right: { field: FieldConfig; globalIdx: number }[] = [];
+  /**
+   * Segment model:
+   *  - "columns": a run of half-width fields rendered in two independent vertical lanes.
+   *  - "full": a single full-width field that breaks the lanes.
+   *
+   * We keep global indices (idx) from the original `fields[]` so move/edit/delete continue to work.
+   */
+  type Item = { field: FieldConfig; idx: number };
+  type Segment =
+    | { type: "columns"; items: Item[] }
+    | { type: "full"; item: Item };
 
-  let toggle = true;
-  fields.forEach((f, globalIdx) => {
-    if (previewMode === "sm" || f.layout === "full") {
-      // Full width spans both → real field left, ghost right
-      left.push({ field: { ...f, __full: true } as any, globalIdx });
-      right.push({ field: { ...f, __ghost: true } as any, globalIdx });
-      toggle = true;
-    } else {
-      if (toggle) {
-        left.push({ field: f, globalIdx });
-        right.push({ field: { ...f, __ghost: true } as any, globalIdx });
-      } else {
-        right.push({ field: f, globalIdx });
-        left.push({ field: { ...f, __ghost: true } as any, globalIdx });
+  const segments: Segment[] = [];
+  let buffer: Item[] = [];
+
+  for (let i = 0; i < fields.length; i++) {
+    const f = fields[i];
+    const item = { field: f, idx: i };
+
+    // On small screens, we will stack everything; segmentation still fine.
+    if (previewMode !== "sm" && f.layout === "full") {
+      if (buffer.length) {
+        segments.push({ type: "columns", items: buffer });
+        buffer = [];
       }
+      segments.push({ type: "full", item });
+    } else {
+      buffer.push(item);
+    }
+  }
+  if (buffer.length) segments.push({ type: "columns", items: buffer });
+
+  /**
+   * Helper: distribute a "columns" segment into two independent lanes.
+   * We don't use ghosts or grid row coupling. Each lane is its own vertical flex stack.
+   */
+  const distributeToLanes = (items: Item[]) => {
+    const left: Item[] = [];
+    const right: Item[] = [];
+    let toggle = true; // you can persist this across segments if you want, but per-segment is usually fine.
+
+    for (const it of items) {
+      if (toggle) left.push(it);
+      else right.push(it);
       toggle = !toggle;
     }
-  });
+    return { left, right };
+  };
 
   return (
     <form
@@ -58,17 +84,16 @@ export default function FormCanvas({
     >
       <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
 
-      {/* Columns */}
+      {/* MOBILE: simple stack in original order */}
       {previewMode === "sm" ? (
-        // Mobile: collapse into one unified column
         <div className="flex flex-col gap-4">
-          {fields.map((field, globalIdx) => (
+          {fields.map((field, idx) => (
             <FieldBlock
               key={field.id}
               field={field}
               formData={formData}
               errors={errors}
-              globalIdx={globalIdx}
+              globalIdx={idx}
               onChange={onChange}
               moveField={moveField}
               deleteField={deleteField}
@@ -78,47 +103,77 @@ export default function FormCanvas({
           ))}
         </div>
       ) : (
-        // Tablet & Desktop: independent left/right tracks
-        <div className="grid md:grid-cols-2 gap-4 items-start">
-          {/* Left column */}
-          <div className="flex flex-col gap-4">
-            {left.map(({ field, globalIdx }) =>
-              (field as any).__ghost ? null : (
-                <FieldBlock
-                  key={field.id}
-                  field={field}
-                  formData={formData}
-                  errors={errors}
-                  globalIdx={globalIdx}
-                  onChange={onChange}
-                  moveField={moveField}
-                  deleteField={deleteField}
-                  onEdit={onEdit}
-                  previewMode={previewMode}
-                />
-              )
-            )}
-          </div>
+        /**
+         * MD+: render segments:
+         *  - "columns" → a 2-col grid where each column is an independent vertical flex stack (independent lane).
+         *  - "full"    → a single full-width block that clears both lanes.
+         */
+        <div className="flex flex-col gap-6">
+          {segments.map((seg, si) => {
+            if (seg.type === "full") {
+              const { field, idx } = seg.item;
+              return (
+                <div key={`full-${si}`} className="w-full">
+                  <FieldBlock
+                    field={field}
+                    formData={formData}
+                    errors={errors}
+                    globalIdx={idx}
+                    onChange={onChange}
+                    moveField={moveField}
+                    deleteField={deleteField}
+                    onEdit={onEdit}
+                    previewMode={previewMode}
+                  />
+                </div>
+              );
+            }
 
-          {/* Right column */}
-          <div className="flex flex-col gap-4">
-            {right.map(({ field, globalIdx }) =>
-              (field as any).__ghost ? null : (
-                <FieldBlock
-                  key={field.id}
-                  field={field}
-                  formData={formData}
-                  errors={errors}
-                  globalIdx={globalIdx}
-                  onChange={onChange}
-                  moveField={moveField}
-                  deleteField={deleteField}
-                  onEdit={onEdit}
-                  previewMode={previewMode}
-                />
-              )
-            )}
-          </div>
+            // columns segment
+            const { left, right } = distributeToLanes(seg.items);
+            return (
+              <div
+                key={`cols-${si}`}
+                className="grid md:grid-cols-2 gap-4 items-start"
+              >
+                {/* Left lane */}
+                <div className="flex flex-col gap-4">
+                  {left.map(({ field, idx }) => (
+                    <FieldBlock
+                      key={field.id}
+                      field={field}
+                      formData={formData}
+                      errors={errors}
+                      globalIdx={idx}
+                      onChange={onChange}
+                      moveField={moveField}
+                      deleteField={deleteField}
+                      onEdit={onEdit}
+                      previewMode={previewMode}
+                    />
+                  ))}
+                </div>
+
+                {/* Right lane */}
+                <div className="flex flex-col gap-4">
+                  {right.map(({ field, idx }) => (
+                    <FieldBlock
+                      key={field.id}
+                      field={field}
+                      formData={formData}
+                      errors={errors}
+                      globalIdx={idx}
+                      onChange={onChange}
+                      moveField={moveField}
+                      deleteField={deleteField}
+                      onEdit={onEdit}
+                      previewMode={previewMode}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -152,13 +207,19 @@ function FieldBlock({
   deleteField,
   onEdit,
   previewMode,
-}: any) {
+}: {
+  field: FieldConfig;
+  formData: Record<string, string>;
+  errors: Record<string, string | null>;
+  globalIdx: number;
+  onChange: (f: FieldConfig, v: string) => void;
+  moveField: (index: number, dir: "up" | "down") => void;
+  deleteField: (index: number) => void;
+  onEdit: (field: FieldConfig) => void;
+  previewMode: "sm" | "md" | "lg";
+}) {
   return (
-    <div
-      className={`flex flex-col items-start justify-start ${
-        previewMode === "sm" || (field as any).__full ? "w-full" : ""
-      }`}
-    >
+    <div className="flex flex-col items-start justify-start w-full">
       {/* Field wrapper */}
       <div className="w-full [&>input]:align-top [&>textarea]:align-top [&>select]:align-top">
         <FieldRenderer
@@ -175,6 +236,7 @@ function FieldBlock({
           type="button"
           className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
           onClick={() => moveField(globalIdx, "up")}
+          title="Move up"
         >
           ↑
         </button>
@@ -182,6 +244,7 @@ function FieldBlock({
           type="button"
           className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
           onClick={() => moveField(globalIdx, "down")}
+          title="Move down"
         >
           ↓
         </button>
@@ -189,6 +252,7 @@ function FieldBlock({
           type="button"
           className="text-xs px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
           onClick={() => onEdit(field)}
+          title="Edit"
         >
           ✎
         </button>
@@ -196,6 +260,7 @@ function FieldBlock({
           type="button"
           className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
           onClick={() => deleteField(globalIdx)}
+          title="Delete"
         >
           ✕
         </button>
