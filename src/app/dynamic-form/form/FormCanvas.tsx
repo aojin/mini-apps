@@ -1,9 +1,10 @@
 // /form/FormCanvas.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FieldConfig } from "../builder/FieldConfig";
 import FieldRenderer from "./FieldRenderer";
+import FormSummary from "./FormSummary"; // ✅ new summary modal
 
 // ✅ Structural block types
 type StructuralType = "header" | "spacer";
@@ -20,7 +21,7 @@ export default function FormCanvas({
   deleteField,
   onEdit,
   previewMode, // "sm" | "md" | "lg"
-  isPreview,   // 🔥 toggle to hide builder chrome but keep submit/reset
+  isPreview, // 🔥 toggle to hide builder chrome but keep submit/reset
   isEditing,
   editingFieldId,
   resetBuilderForm,
@@ -43,6 +44,10 @@ export default function FormCanvas({
   resetBuilderForm: () => void;
   insertBlock: (at: number, type: StructuralType) => void;
 }) {
+  // ─── State for submission summary ───
+  const [showSummary, setShowSummary] = useState(false);
+  const [submittedData, setSubmittedData] = useState<Record<string, string>>({});
+
   type Item = { field: FieldConfig; idx: number };
   type Segment =
     | { type: "columns"; items: Item[] }
@@ -107,150 +112,165 @@ export default function FormCanvas({
     );
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(e);
-      }}
-      noValidate
-      className="bg-white p-6 rounded-2xl shadow space-y-4"
-    >
-      {!isPreview && (
-        <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
-      )}
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(e);
 
-      {/* Top toolbar (builder only) */}
-      <StructuralToolbar at={-1} />
+          // ✅ After successful validation, trigger summary modal
+          setSubmittedData(formData);
+          setShowSummary(true);
+        }}
+        noValidate
+        className="bg-white p-6 rounded-2xl shadow space-y-4"
+      >
+        {!isPreview && (
+          <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
+        )}
 
-      {previewMode === "sm" ? (
-        <div className="flex flex-col gap-4">
-          {fields.map((field, idx) => (
-            <FieldBlock
-              key={field.id}
-              field={field}
-              fields={fields}
-              formData={formData}
-              errors={errors}
-              globalIdx={idx}
-              onChange={onChange}
-              updateFieldConfig={updateFieldConfig}
-              moveField={moveField}
-              deleteField={deleteField}
-              onEdit={onEdit}
-              isPreview={isPreview}
-              isEditing={isEditing}
-              editingFieldId={editingFieldId}
-              resetBuilderForm={resetBuilderForm}
-              showBuilderControls={!isPreview}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {segments.map((seg, si) => {
-            if (seg.type === "full") {
-              const { field, idx } = seg.item;
+        {/* Top toolbar (builder only) */}
+        <StructuralToolbar at={-1} />
+
+        {previewMode === "sm" ? (
+          <div className="flex flex-col gap-4">
+            {fields.map((field, idx) => (
+              <FieldBlock
+                key={field.id}
+                field={field}
+                fields={fields}
+                formData={formData}
+                errors={errors}
+                globalIdx={idx}
+                onChange={onChange}
+                updateFieldConfig={updateFieldConfig}
+                moveField={moveField}
+                deleteField={deleteField}
+                onEdit={onEdit}
+                isPreview={isPreview}
+                isEditing={isEditing}
+                editingFieldId={editingFieldId}
+                resetBuilderForm={resetBuilderForm}
+                showBuilderControls={!isPreview}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {segments.map((seg, si) => {
+              if (seg.type === "full") {
+                const { field, idx } = seg.item;
+                return (
+                  <div key={`full-${si}`} className="w-full">
+                    <FieldBlock
+                      field={field}
+                      fields={fields}
+                      formData={formData}
+                      errors={errors}
+                      globalIdx={idx}
+                      onChange={onChange}
+                      updateFieldConfig={updateFieldConfig}
+                      moveField={moveField}
+                      deleteField={deleteField}
+                      onEdit={onEdit}
+                      isPreview={isPreview}
+                      isEditing={isEditing}
+                      editingFieldId={editingFieldId}
+                      resetBuilderForm={resetBuilderForm}
+                      showBuilderControls={!isPreview}
+                    />
+                  </div>
+                );
+              }
+
+              const { left, right } = distributeToLanes(seg.items);
               return (
-                <div key={`full-${si}`} className="w-full">
-                  <FieldBlock
-                    field={field}
-                    fields={fields}
-                    formData={formData}
-                    errors={errors}
-                    globalIdx={idx}
-                    onChange={onChange}
-                    updateFieldConfig={updateFieldConfig}
-                    moveField={moveField}
-                    deleteField={deleteField}
-                    onEdit={onEdit}
-                    isPreview={isPreview}
-                    isEditing={isEditing}
-                    editingFieldId={editingFieldId}
-                    resetBuilderForm={resetBuilderForm}
-                    showBuilderControls={!isPreview}
-                  />
+                <div
+                  key={`cols-${si}`}
+                  className="grid md:grid-cols-2 gap-4 items-start"
+                >
+                  <div className="flex flex-col gap-4">
+                    {left.map(({ field, idx, lane }) => (
+                      <FieldBlock
+                        key={field.id}
+                        field={field}
+                        fields={fields}
+                        formData={formData}
+                        errors={errors}
+                        globalIdx={idx}
+                        lane={lane}
+                        onChange={onChange}
+                        updateFieldConfig={updateFieldConfig}
+                        moveField={moveField}
+                        deleteField={deleteField}
+                        onEdit={onEdit}
+                        isPreview={isPreview}
+                        isEditing={isEditing}
+                        editingFieldId={editingFieldId}
+                        resetBuilderForm={resetBuilderForm}
+                        showBuilderControls={!isPreview}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    {right.map(({ field, idx, lane }) => (
+                      <FieldBlock
+                        key={field.id}
+                        field={field}
+                        fields={fields}
+                        formData={formData}
+                        errors={errors}
+                        globalIdx={idx}
+                        lane={lane}
+                        onChange={onChange}
+                        updateFieldConfig={updateFieldConfig}
+                        moveField={moveField}
+                        deleteField={deleteField}
+                        onEdit={onEdit}
+                        isPreview={isPreview}
+                        isEditing={isEditing}
+                        editingFieldId={editingFieldId}
+                        resetBuilderForm={resetBuilderForm}
+                        showBuilderControls={!isPreview}
+                      />
+                    ))}
+                  </div>
                 </div>
               );
-            }
+            })}
+          </div>
+        )}
 
-            const { left, right } = distributeToLanes(seg.items);
-            return (
-              <div
-                key={`cols-${si}`}
-                className="grid md:grid-cols-2 gap-4 items-start"
-              >
-                <div className="flex flex-col gap-4">
-                  {left.map(({ field, idx, lane }) => (
-                    <FieldBlock
-                      key={field.id}
-                      field={field}
-                      fields={fields}
-                      formData={formData}
-                      errors={errors}
-                      globalIdx={idx}
-                      lane={lane}
-                      onChange={onChange}
-                      updateFieldConfig={updateFieldConfig}
-                      moveField={moveField}
-                      deleteField={deleteField}
-                      onEdit={onEdit}
-                      isPreview={isPreview}
-                      isEditing={isEditing}
-                      editingFieldId={editingFieldId}
-                      resetBuilderForm={resetBuilderForm}
-                      showBuilderControls={!isPreview}
-                    />
-                  ))}
-                </div>
-                <div className="flex flex-col gap-4">
-                  {right.map(({ field, idx, lane }) => (
-                    <FieldBlock
-                      key={field.id}
-                      field={field}
-                      fields={fields}
-                      formData={formData}
-                      errors={errors}
-                      globalIdx={idx}
-                      lane={lane}
-                      onChange={onChange}
-                      updateFieldConfig={updateFieldConfig}
-                      moveField={moveField}
-                      deleteField={deleteField}
-                      onEdit={onEdit}
-                      isPreview={isPreview}
-                      isEditing={isEditing}
-                      editingFieldId={editingFieldId}
-                      resetBuilderForm={resetBuilderForm}
-                      showBuilderControls={!isPreview}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        {/* Bottom toolbar (builder only) */}
+        <StructuralToolbar at={fields.length - 1} />
+
+        {/* 🔥 Always show Submit/Reset so validation works */}
+        <div className="mt-6 flex gap-4">
+          <button
+            type="submit"
+            className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
+          >
+            Submit
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400"
+          >
+            Reset
+          </button>
         </div>
+      </form>
+
+      {/* ✅ Summary modal after successful submit */}
+      {showSummary && (
+        <FormSummary
+          data={submittedData}
+          fields={fields}
+          onClose={() => setShowSummary(false)}
+        />
       )}
-
-      {/* Bottom toolbar (builder only) */}
-      <StructuralToolbar at={fields.length - 1} />
-
-      {/* 🔥 Always show Submit/Reset so validation works */}
-      <div className="mt-6 flex gap-4">
-        <button
-          type="submit"
-          className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
-        >
-          Submit
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400"
-        >
-          Reset
-        </button>
-      </div>
-    </form>
+    </>
   );
 }
 

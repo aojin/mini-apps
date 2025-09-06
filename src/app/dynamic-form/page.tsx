@@ -39,7 +39,7 @@ function DynamicFormBuilder() {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [counter, setCounter] = useState(0);
 
-  // 🔥 separate: preview width vs preview controls
+  // 🔥 separate: preview width vs preview toggle
   const [previewMode, setPreviewMode] = useState<"sm" | "md" | "lg">("lg");
   const [isPreview, setIsPreview] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -134,6 +134,7 @@ function DynamicFormBuilder() {
     resetBuilderForm();
   };
 
+  // ─── Insert header or spacer ───
   const insertBlock = (
     index: number,
     type: "header" | "spacer",
@@ -310,8 +311,8 @@ function DynamicFormBuilder() {
         {/* Preview */}
         {fields.length > 0 && (
           <div className="flex flex-col items-center w-full overflow-visible">
-            {/* 🔥 Controls row */}
-            <div className="flex w-full justify-between mb-4">
+            {/* 🔥 Sticky controls */}
+            <div className="sticky top-0 z-10 flex w-full justify-between mb-4 bg-gray-100 py-2">
               {/* Left: Preview toggle */}
               <button
                 type="button"
@@ -329,7 +330,9 @@ function DynamicFormBuilder() {
                   type="button"
                   onClick={() => setPreviewMode("sm")}
                   className={`px-3 py-1 rounded ${
-                    previewMode === "sm" ? "bg-blue-500 text-white" : "bg-gray-200"
+                    previewMode === "sm"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200"
                   }`}
                 >
                   Mobile
@@ -383,7 +386,7 @@ function DynamicFormBuilder() {
                 deleteField={deleteField}
                 onEdit={handleEdit}
                 previewMode={previewMode}
-                isPreview={isPreview} // 👈 pass toggle down
+                isPreview={isPreview}
                 onReset={handleReset}
                 isEditing={editingFieldId !== null}
                 editingFieldId={editingFieldId ?? undefined}
