@@ -58,7 +58,7 @@ function applyMask(value: string, maskType?: string, customPattern?: string): st
       if (!customPattern) return value;
       try {
         const regex = new RegExp(customPattern);
-        return regex.test(value) ? value : value; // only validate
+        return regex.test(value) ? value : value;
       } catch {
         return value;
       }
@@ -114,7 +114,12 @@ export default function FieldRenderer({
 
   // ✅ Seed defaults once on mount
   useEffect(() => {
-    if (!value && (field.type === "select" || field.type === "radio-group" || field.type === "checkbox")) {
+    if (
+      !value &&
+      (field.type === "select" ||
+        field.type === "radio-group" ||
+        field.type === "checkbox")
+    ) {
       const defVal = computeDefaultValue(field);
       if (defVal) {
         const validationError = runValidators(defVal, field, context, allFields);
@@ -132,16 +137,13 @@ export default function FieldRenderer({
   const handleChange = (raw: string) => {
     let val = raw;
 
-    // simple restrictions
     if (field.alphaOnly) val = val.replace(/[^A-Za-z]/g, "");
     if (field.noWhitespace) val = val.replace(/\s+/g, "");
 
-    // textarea maxlength enforcement
     if (field.type === "textarea" && field.maxlength !== undefined) {
       val = val.slice(0, field.maxlength);
     }
 
-    // apply masks (skip date/number/textarea)
     if (!["date", "datetime-local", "number", "textarea"].includes(field.type)) {
       val = applyMask(val, field.maskType, field.pattern);
     }
@@ -151,14 +153,56 @@ export default function FieldRenderer({
     onChange(val, validationError);
   };
 
-  // ─── Render UI ───
+  // ─── Structural: Header ───
+  if (field.type === "header") {
+    const HeadingTag: React.ElementType = field.level || "h2";
+
+    const sizeClass =
+      field.level === "h1"
+        ? "text-4xl"
+        : field.level === "h2"
+        ? "text-2xl"
+        : field.level === "h3"
+        ? "text-xl"
+        : field.level === "h4"
+        ? "text-lg"
+        : "text-base"; // h5
+
+    const widthClass = field.layout === "half" ? "w-1/2" : "w-full";
+    const scaleClass = field.layout === "half" ? "text-sm sm:text-base" : "";
+
+    return (
+      <HeadingTag
+        className={`${sizeClass} ${scaleClass} font-semibold text-gray-800 ${widthClass} my-4`}
+      >
+        {field.label || "Header"}
+      </HeadingTag>
+    );
+  }
+
+  // ─── Structural: Spacer ───
+  if (field.type === "spacer") {
+    const sizeClass =
+      field.spacerSize === "sm"
+        ? "h-2 my-1"
+        : field.spacerSize === "lg"
+        ? "h-12 my-4"
+        : field.spacerSize === "xl"
+        ? "h-20 my-6"
+        : "h-6 my-2"; // default md
+
+    const widthClass = field.layout === "half" ? "w-1/2" : "w-full";
+
+    return <div className={`${widthClass} ${sizeClass}`} />;
+  }
+
+  // ─── Inputs ───
   return (
     <div className="flex flex-col items-start">
       {field.label && (
         <label className="block font-medium text-sm mb-2">{field.label}</label>
       )}
 
-      {/* ─── Textarea ─── */}
       {field.type === "textarea" ? (
         <textarea
           name={field.name}
@@ -170,37 +214,34 @@ export default function FieldRenderer({
           placeholder={field.placeholder}
           maxLength={field.maxlength}
         />
-      ) : /* ─── Select ─── */
-field.type === "select" && field.options ? (
-  <select
-    name={field.name}
-    value={
-      field.multiple
-        ? value.split(",").filter(Boolean)
-        : value
-    }
-    onChange={(e) => {
-      if (field.multiple) {
-        const selected = Array.from(e.target.selectedOptions).map(
-          (opt) => opt.value
-        );
-        handleChange(selected.join(","));
-      } else {
-        handleChange(e.target.value);
-      }
-    }}
-    className={`${baseInputClass} ${field.multiple ? "min-h-[6rem]" : ""}`}
-    multiple={field.multiple}
-    size={field.multiple ? Math.min(field.options.length, 4) : undefined} // 👈 show multiple rows
-  >
-    {!field.multiple && <option value="">-- Select --</option>}
-    {field.options.map((opt, i) => (
-      <option key={i} value={opt.value}>
-        {opt.label}
-      </option>
-    ))}
-  </select>
-) : /* ─── Checkbox group ─── */ field.type === "checkbox" && field.options ? (
+      ) : field.type === "select" && field.options ? (
+        <select
+          name={field.name}
+          value={field.multiple ? value.split(",").filter(Boolean) : value}
+          onChange={(e) => {
+            if (field.multiple) {
+              const selected = Array.from(e.target.selectedOptions).map(
+                (opt) => opt.value
+              );
+              handleChange(selected.join(","));
+            } else {
+              handleChange(e.target.value);
+            }
+          }}
+          className={`${baseInputClass} ${
+            field.multiple ? "min-h-[6rem]" : ""
+          }`}
+          multiple={field.multiple}
+          size={field.multiple ? Math.min(field.options.length, 4) : undefined}
+        >
+          {!field.multiple && <option value="">-- Select --</option>}
+          {field.options.map((opt, i) => (
+            <option key={i} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      ) : field.type === "checkbox" && field.options ? (
         <div
           className={
             field.orientation === "horizontal"
@@ -209,7 +250,6 @@ field.type === "select" && field.options ? (
           }
         >
           {field.options.map((opt, i) => {
-            // ✅ now only use `value` for state
             const selected = value ? value.split(",") : [];
             const isChecked = selected.includes(opt.value);
 
@@ -234,7 +274,7 @@ field.type === "select" && field.options ? (
             );
           })}
         </div>
-      ) : /* ─── Radio group ─── */ field.type === "radio-group" && field.options ? (
+      ) : field.type === "radio-group" && field.options ? (
         <div
           className={
             field.orientation === "horizontal"
@@ -256,7 +296,6 @@ field.type === "select" && field.options ? (
           ))}
         </div>
       ) : (
-        // ─── Generic input ───
         <input
           type={field.type}
           name={field.name}

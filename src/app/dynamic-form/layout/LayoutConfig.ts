@@ -1,3 +1,4 @@
+// /form/LayoutConfig.ts
 import { FieldType } from "../builder/FieldConfig";
 
 interface LayoutDefaults {
@@ -94,10 +95,26 @@ export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
     padding: "p-2",
   },
   select: {
-    layout: "half", // dropdowns usually fit nicely in half width
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-4",
     padding: "p-2",
+  },
+
+  // ─── New non-input block defaults ───
+  header: {
+    layout: "full",
+    align: "start",
+    justify: "start",
+    margin: "mt-6 mb-2",
+    padding: "p-1",
+  },
+  spacer: {
+    layout: "full",
+    align: "center",
+    justify: "center",
+    margin: "my-4",
+    padding: "p-0",
   },
 };

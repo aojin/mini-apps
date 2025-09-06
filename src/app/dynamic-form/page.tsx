@@ -111,24 +111,60 @@ function DynamicFormBuilder() {
     setEditingFieldId(null);
   };
 
-  // ─── Add field ───
-  const addField = () => {
-    if (!newField.label.trim() || !newField.name.trim() || !newField.type) return;
-    setCounter((c) => {
-      const id = c + 1;
-      const f = { ...newField, id };
-      setFields([...fields, f]);
+  // put this at top of DynamicFormBuilder
+const nextIdRef = React.useRef(0);
 
-      // ✅ seed default value into formData
-      const defVal = computeDefaultValue(f);
-      if (defVal) {
-        setFormData((prev) => ({ ...prev, [f.name]: defVal }));
-      }
+// ─── Add field ───
+const addField = () => {
+  if (!newField.label.trim() || !newField.name.trim() || !newField.type) return;
 
-      return id;
-    });
-    resetBuilderForm();
+  nextIdRef.current += 1; // ✅ safe increment
+  const id = nextIdRef.current;
+
+  const f = { ...newField, id };
+  setFields((prev) => [...prev, f]);
+
+  // ✅ seed default value into formData
+  const defVal = computeDefaultValue(f);
+  if (defVal) {
+    setFormData((prev) => ({ ...prev, [f.name]: defVal }));
+  }
+
+  resetBuilderForm();
+};
+
+// ─── Insert structural block ───
+const insertBlock = (
+  index: number,
+  type: "header" | "subheader" | "spacer"
+) => {
+  nextIdRef.current += 1; // ✅ safe increment
+  const id = nextIdRef.current;
+
+  const block: FieldConfig = {
+    id,
+    type,
+    layout: "full", // default, can toggle later
+    label: type === "spacer" ? "" : type === "header" ? "Header" : "Subheader",
+    ...(type === "header" && { level: "h2" }),
+    ...(type === "subheader" && { level: "h3" }),
+    ...(type === "spacer" && { spacerSize: "md" }),
+    name: `${type}_${id}`,
   };
+
+  setFields((prev) => {
+    const copy = [...prev];
+    let target = index < 0 ? 0 : index + 1;
+    if (target > copy.length) target = copy.length;
+    copy.splice(target, 0, block);
+    return copy;
+  });
+
+  // force clear builder
+  setNewField({ ...defaultField });
+  setEditingFieldId(null);
+};
+
 
   // ─── Update existing field ───
   const updateField = () => {
@@ -207,6 +243,7 @@ function DynamicFormBuilder() {
 
     // First pass
     fields.forEach((f) => {
+      if (["header", "subheader", "spacer"].includes(f.type)) return;
       let val = formData[f.name] || "";
       if (!val) {
         // ✅ fallback to defaults at submit time
@@ -252,6 +289,14 @@ function DynamicFormBuilder() {
     setFormData(clearedData);
     setErrors(clearedErrors);
   };
+
+
+
+const updateFieldConfig = (updated: FieldConfig) => {
+  setFields((prev) =>
+    prev.map((f) => (f.id === updated.id ? updated : f))
+  );
+};
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
@@ -330,6 +375,7 @@ function DynamicFormBuilder() {
                 formData={formData}
                 errors={errors}
                 onChange={handleChange}
+                updateFieldConfig={updateFieldConfig}   // ✅ pass down
                 onSubmit={handleSubmit}
                 moveField={moveField}
                 deleteField={deleteField}
@@ -339,7 +385,8 @@ function DynamicFormBuilder() {
                 isEditing={editingFieldId !== null}
                 editingFieldId={editingFieldId ?? undefined}
                 resetBuilderForm={resetBuilderForm}
-              />
+                insertBlock={insertBlock}
+                />
             </div>
           </div>
         )}

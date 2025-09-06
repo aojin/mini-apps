@@ -28,10 +28,10 @@ export default function FieldBuilder({
   const resetBuilderForm = () => {
     setNewField({
       id: 0,
-      type: "" as any, // start empty
+      type: "" as any,
       label: "",
       name: "",
-      ...LayoutConfig["text"], // fallback to "text" defaults
+      ...LayoutConfig["text"],
       maskType: undefined,
       pattern: undefined,
       maxlength: undefined,
@@ -47,6 +47,7 @@ export default function FieldBuilder({
       setError("Type is required.");
       return false;
     }
+
     if (!newField.name.trim()) {
       setError("Name (key) is required.");
       return false;
@@ -56,13 +57,11 @@ export default function FieldBuilder({
       return false;
     }
 
-    // Prevent duplicate names (ignore current editing field)
     if (fields.some((f) => f.name === newField.name && f.id !== newField.id)) {
       setError(`Field name "${newField.name}" is already in use.`);
       return false;
     }
 
-    // Enforce option rules
     if (newField.type === "radio-group") {
       if (!newField.options || newField.options.length < 2) {
         setError("Radio groups must have at least 2 options.");
@@ -80,58 +79,57 @@ export default function FieldBuilder({
     return true;
   };
 
-  // ─── Save handler ───
   const handleSave = () => {
-    if (!validateNewField()) return;
-    if (isEditing) {
-      updateField();
-    } else {
-      addField();
-    }
-    resetBuilderForm();
-  };
+  if (!validateNewField()) return;
 
-  // ─── Handle type change ───
+  // 🚫 skip structural entirely
+  if (["header", "subheader", "spacer"].includes(newField.type)) {
+    resetBuilderForm();
+    return;
+  }
+
+  if (isEditing) updateField();
+  else addField();
+
+  resetBuilderForm();
+};
+
+
   const handleTypeChange = (newType: FieldType | "") => {
     if (!newType) {
       resetBuilderForm();
       return;
     }
 
-    setNewField({
+    const base: Partial<FieldConfig> = {
       ...newField,
       type: newType,
-      ...LayoutConfig[newType], // ← respects default layout
-      maskType: undefined,
-      pattern: undefined,
-      maxlength: undefined,
-      placeholder: "",
-      ...(newType === "radio-group"
-        ? {
-            options: [
-              { label: "Option 1", value: "opt1" },
-              { label: "Option 2", value: "opt2" },
-            ],
-            orientation: "vertical",
-          }
-        : newType === "checkbox"
-        ? {
-            options: [{ label: "Option 1", value: "opt1" }],
-            orientation: "vertical",
-          }
-        : newType === "select"
-        ? {
-            options: [{ label: "Option 1", value: "opt1" }],
-          }
-        : {}),
-    });
+      ...LayoutConfig[newType],
+    };
+
+    switch (newType) {
+      case "radio-group":
+        base.options = [
+          { label: "Option 1", value: "opt1" },
+          { label: "Option 2", value: "opt2" },
+        ];
+        base.orientation = "vertical";
+        break;
+      case "checkbox":
+        base.options = [{ label: "Option 1", value: "opt1" }];
+        base.orientation = "vertical";
+        break;
+      case "select":
+        base.options = [{ label: "Option 1", value: "opt1" }];
+        break;
+    }
+
+    setNewField(base as FieldConfig);
   };
 
-  // ─── Disable save button if incomplete ───
   const isSaveDisabled =
     !newField.type || !newField.name.trim() || !newField.label.trim();
 
-  // ─── Render ───
   return (
     <div className="bg-white p-6 rounded-2xl shadow mb-8 space-y-4 w-full overflow-visible">
       <h2 className="text-xl font-semibold">
@@ -140,8 +138,8 @@ export default function FieldBuilder({
 
       {/* ─── Basic setup inputs ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
-        {/* Field type */}
-        <div className="overflow-visible">
+        {/* Type */}
+        <div>
           <label className="block text-sm font-medium mb-1">Type</label>
           <select
             className="border rounded w-full px-3 py-2 leading-normal"
@@ -162,11 +160,12 @@ export default function FieldBuilder({
             <option value="radio-group">Radio Group</option>
             <option value="textarea">Textarea</option>
             <option value="select">Select</option>
+            {/* ❌ structural types intentionally excluded */}
           </select>
         </div>
 
         {/* Layout */}
-        <div className="overflow-visible">
+        <div>
           <label className="block text-sm font-medium mb-1">Layout</label>
           <select
             className="border rounded w-full px-3 py-2 leading-normal"
@@ -183,15 +182,13 @@ export default function FieldBuilder({
           </select>
         </div>
 
-        {/* Name (key) */}
+        {/* Name */}
         <div>
           <label className="block text-sm font-medium mb-1">Name (key)</label>
           <input
             type="text"
             className={`border rounded w-full px-3 py-2 leading-normal ${
-              error?.includes("Name") || error?.includes("in use")
-                ? "border-red-500"
-                : ""
+              error?.includes("Name") ? "border-red-500" : ""
             }`}
             value={newField.name}
             onChange={(e) =>
@@ -216,22 +213,19 @@ export default function FieldBuilder({
         </div>
       </div>
 
-      {/* Options builder (checkbox, radio, select) */}
+      {/* Options builder */}
       {["checkbox", "radio-group", "select"].includes(newField.type) && (
         <OptionsBuilder field={newField} setField={setNewField} />
       )}
 
-      {/* Masking */}
+      {/* Masking + validation */}
       {newField.type && (
-        <MaskingBuilder field={newField} setField={setNewField} />
+        <>
+          <MaskingBuilder field={newField} setField={setNewField} />
+          <ValidationBuilder field={newField} setField={setNewField} />
+        </>
       )}
 
-      {/* Validation */}
-      {newField.type && (
-        <ValidationBuilder field={newField} setField={setNewField} />
-      )}
-
-      {/* Error display */}
       {error && (
         <p className="text-red-600 text-sm font-medium border border-red-300 bg-red-50 px-3 py-2 rounded">
           {error}

@@ -4,13 +4,16 @@
 import React from "react";
 import { FieldConfig } from "../builder/FieldConfig";
 import FieldRenderer from "./FieldRenderer";
-import { runValidators } from "./Validation"; // ✅ central validation
+
+// ✅ Structural block types (unified header only)
+type StructuralType = "header" | "spacer";
 
 export default function FormCanvas({
   fields,
   formData,
   errors,
   onChange,
+  updateFieldConfig,
   onSubmit,
   onReset,
   moveField,
@@ -20,11 +23,13 @@ export default function FormCanvas({
   isEditing,
   editingFieldId,
   resetBuilderForm,
+  insertBlock,
 }: {
   fields: FieldConfig[];
   formData: Record<string, string>;
   errors: Record<string, string | null>;
   onChange: (f: FieldConfig, v: string, err?: string | null) => void;
+  updateFieldConfig: (f: FieldConfig) => void;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
   moveField: (index: number, dir: "up" | "down") => void;
@@ -34,6 +39,7 @@ export default function FormCanvas({
   isEditing: boolean;
   editingFieldId?: number;
   resetBuilderForm: () => void;
+  insertBlock: (at: number, type: StructuralType) => void;
 }) {
   type Item = { field: FieldConfig; idx: number };
   type Segment =
@@ -43,22 +49,28 @@ export default function FormCanvas({
   const segments: Segment[] = [];
   let buffer: Item[] = [];
 
+  // ─── Build row segments ───
   for (let i = 0; i < fields.length; i++) {
     const f = fields[i];
     const item = { field: f, idx: i };
 
-    if (previewMode !== "sm" && f.layout === "full") {
-      if (buffer.length) {
-        segments.push({ type: "columns", items: buffer });
-        buffer = [];
+    if (previewMode !== "sm") {
+      if (f.layout === "full") {
+        if (buffer.length) {
+          segments.push({ type: "columns", items: buffer });
+          buffer = [];
+        }
+        segments.push({ type: "full", item });
+      } else {
+        buffer.push(item);
       }
-      segments.push({ type: "full", item });
     } else {
       buffer.push(item);
     }
   }
   if (buffer.length) segments.push({ type: "columns", items: buffer });
 
+  // ─── Half/Full distribution ───
   const distributeToLanes = (items: Item[]) => {
     const left: (Item & { lane: "Left" })[] = [];
     const right: (Item & { lane: "Right" })[] = [];
@@ -71,47 +83,39 @@ export default function FormCanvas({
     return { left, right };
   };
 
-  // ─── Submit Handler ───
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    let hasError = false;
-    const newErrors: Record<string, string | null> = {};
-
-    fields.forEach((f) => {
-      const val = formData[f.name] || "";
-      const err = runValidators(val, f, formData, fields);
-      if (err) hasError = true;
-      newErrors[f.name] = err;
-    });
-
-    fields.forEach((f) => {
-      if (f.matchField) {
-        const val = formData[f.name] || "";
-        const err = runValidators(val, f, formData, fields);
-        if (err) {
-          hasError = true;
-          newErrors[f.name] = err;
-        }
-      }
-    });
-
-    Object.entries(newErrors).forEach(([name, err]) => {
-      const f = fields.find((ff) => ff.name === name);
-      if (f) onChange(f, formData[name] || "", err);
-    });
-
-    if (hasError) return;
-    onSubmit(e);
-  };
+  // ─── Structural Toolbar ───
+  const StructuralToolbar = ({ at }: { at: number }) => (
+    <div className="flex gap-2 my-2">
+      {(["header", "spacer"] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          className={`text-xs px-2 py-1 rounded border ${
+            t === "header"
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+          onClick={() => insertBlock(at, t)}
+        >
+          + {t.charAt(0).toUpperCase() + t.slice(1)}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(e);
+      }}
       noValidate
       className="bg-white p-6 rounded-2xl shadow space-y-4"
     >
       <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
+
+      {/* Top toolbar */}
+      <StructuralToolbar at={-1} />
 
       {previewMode === "sm" ? (
         <div className="flex flex-col gap-4">
@@ -124,6 +128,7 @@ export default function FormCanvas({
               errors={errors}
               globalIdx={idx}
               onChange={onChange}
+              updateFieldConfig={updateFieldConfig}
               moveField={moveField}
               deleteField={deleteField}
               onEdit={onEdit}
@@ -148,6 +153,7 @@ export default function FormCanvas({
                     errors={errors}
                     globalIdx={idx}
                     onChange={onChange}
+                    updateFieldConfig={updateFieldConfig}
                     moveField={moveField}
                     deleteField={deleteField}
                     onEdit={onEdit}
@@ -177,6 +183,7 @@ export default function FormCanvas({
                       globalIdx={idx}
                       lane={lane}
                       onChange={onChange}
+                      updateFieldConfig={updateFieldConfig}
                       moveField={moveField}
                       deleteField={deleteField}
                       onEdit={onEdit}
@@ -198,6 +205,7 @@ export default function FormCanvas({
                       globalIdx={idx}
                       lane={lane}
                       onChange={onChange}
+                      updateFieldConfig={updateFieldConfig}
                       moveField={moveField}
                       deleteField={deleteField}
                       onEdit={onEdit}
@@ -213,6 +221,9 @@ export default function FormCanvas({
           })}
         </div>
       )}
+
+      {/* Bottom toolbar */}
+      <StructuralToolbar at={fields.length - 1} />
 
       <div className="mt-6 flex gap-4">
         <button
@@ -233,77 +244,123 @@ export default function FormCanvas({
   );
 }
 
-function FieldBlock({
-  field,
-  fields,
-  formData,
-  errors,
-  globalIdx,
-  onChange,
-  moveField,
-  deleteField,
-  onEdit,
-  previewMode,
-  isEditing,
-  editingFieldId,
-  resetBuilderForm,
-  lane,
-}: {
-  field: FieldConfig;
-  fields: FieldConfig[];
-  formData: Record<string, string>;
-  errors: Record<string, string | null>;
-  globalIdx: number;
-  onChange: (f: FieldConfig, v: string, err?: string | null) => void;
-  moveField: (index: number, dir: "up" | "down") => void;
-  deleteField: (index: number) => void;
-  onEdit: (field: FieldConfig) => void;
-  previewMode: "sm" | "md" | "lg";
-  isEditing: boolean;
-  editingFieldId?: number;
-  resetBuilderForm: () => void;
-  lane?: "Left" | "Right";
-}) {
+// ─── FieldBlock ───
+function FieldBlock({ ...props }) {
+  const {
+    field,
+    fields,
+    formData,
+    errors,
+    globalIdx,
+    onChange,
+    updateFieldConfig,
+    moveField,
+    deleteField,
+    onEdit,
+    previewMode,
+    isEditing,
+    editingFieldId,
+    resetBuilderForm,
+    lane,
+  } = props;
+
   const isCurrentlyEditing = isEditing && editingFieldId === field.id;
+  const isStructural = ["header", "spacer"].includes(field.type);
 
   const layoutLabel =
-    field.layout === "full"
-      ? "Full"
-      : `Half${lane ? ` (${lane})` : ""}`;
+    field.layout === "full" ? "Full" : `Half${lane ? ` (${lane})` : ""}`;
 
   return (
-    <div className="flex flex-col items-start justify-start w-full border border-gray-200 rounded p-3">
-      {/* 🔹 Sequence + layout indicator */}
+    <div className="flex flex-col items-start justify-start border border-gray-200 rounded p-3 w-full">
       <div className="text-xs text-gray-500 mb-1">
-        #{globalIdx + 1} · {layoutLabel}
+        #{globalIdx + 1} · {layoutLabel} · {field.type}
       </div>
 
-      <div className="w-full [&>input]:align-top [&>textarea]:align-top [&>select]:align-top">
+      <div className="w-full">
         <FieldRenderer
           field={field}
           value={formData[field.name] || ""}
           error={errors[field.name]}
           context={formData}
           allFields={fields}
-          onChange={(val, err) => {
-            onChange(field, val, err);
-            fields.forEach((f) => {
-              if (f.matchField === field.name) {
-                const otherVal = formData[f.name] || "";
-                const newErr = runValidators(
-                  otherVal,
-                  f,
-                  { ...formData, [field.name]: val },
-                  fields
-                );
-                onChange(f, otherVal, newErr);
-              }
-            });
-          }}
+          onChange={(val, err) => onChange(field, val, err)}
         />
       </div>
 
-      <div className="flex gap-2 mt-2">
+      {/* Inline controls for structural edits */}
+      {isStructural && (
+        <div className="flex flex-wrap gap-2 mt-2 text-xs">
+          {field.type === "header" && (
+            <>
+              <input
+                type="text"
+                value={field.label}
+                onChange={(e) =>
+                  updateFieldConfig({ ...field, label: e.target.value })
+                }
+                className="border px-2 py-1 rounded text-sm"
+                placeholder="Edit header text"
+              />
+              <select
+                value={field.level || "h2"}
+                onChange={(e) =>
+                  updateFieldConfig({
+                    ...field,
+                    level: e.target.value as
+                      | "h1"
+                      | "h2"
+                      | "h3"
+                      | "h4"
+                      | "h5",
+                  })
+                }
+                className="border px-2 py-1 rounded"
+              >
+                <option value="h1">H1</option>
+                <option value="h2">H2</option>
+                <option value="h3">H3</option>
+                <option value="h4">H4</option>
+                <option value="h5">H5</option>
+              </select>
+            </>
+          )}
+
+          {field.type === "spacer" && (
+            <select
+              value={field.spacerSize || "md"}
+              onChange={(e) =>
+                updateFieldConfig({
+                  ...field,
+                  spacerSize: e.target.value as "sm" | "md" | "lg" | "xl",
+                })
+              }
+              className="border px-2 py-1 rounded"
+            >
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+              <option value="xl">XL</option>
+            </select>
+          )}
+
+          {/* Toggle layout */}
+          <button
+            type="button"
+            className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
+            onClick={() =>
+              updateFieldConfig({
+                ...field,
+                layout: field.layout === "full" ? "half" : "full",
+              })
+            }
+          >
+            Toggle {field.layout === "full" ? "Half" : "Full"}
+          </button>
+        </div>
+      )}
+
+      {/* Always show move + delete */}
+      <div className="flex gap-2 mt-2 flex-wrap">
         <button
           type="button"
           className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
@@ -320,14 +377,7 @@ function FieldBlock({
         >
           ↓
         </button>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
-          onClick={() => onEdit(field)}
-          title="Edit"
-        >
-          ✎
-        </button>
+
         <button
           type="button"
           className={`text-xs px-2 py-1 rounded ${
@@ -345,6 +395,18 @@ function FieldBlock({
         >
           ✕
         </button>
+
+        {/* Only non-structural get ✎ edit */}
+        {!isStructural && (
+          <button
+            type="button"
+            className="text-xs px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
+            onClick={() => onEdit(field)}
+            title="Edit"
+          >
+            ✎
+          </button>
+        )}
       </div>
     </div>
   );

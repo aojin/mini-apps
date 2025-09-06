@@ -12,6 +12,11 @@ export function runValidators(
 ): string | null {
   console.log("Validating:", { name: field.name, value, rules: field });
 
+  // 🚫 Skip structural elements (they never need validation)
+  if (["header", "subheader", "spacer"].includes(field.type)) {
+    return null;
+  }
+
   // ─── Helper: return with custom error override ───
   const fail = (msg: string) => field.customErrorMessage || msg;
 
@@ -26,7 +31,6 @@ export function runValidators(
   if (field.decimalPlaces !== undefined && field.decimalPlaces < 0)
     field.decimalPlaces = 0;
 
-  // Normalize ranges
   if (
     field.minlength !== undefined &&
     field.maxlength !== undefined &&
