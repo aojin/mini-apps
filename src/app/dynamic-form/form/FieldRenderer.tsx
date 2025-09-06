@@ -154,31 +154,31 @@ export default function FieldRenderer({
   };
 
   // ─── Structural: Header ───
-  if (field.type === "header") {
-    const HeadingTag: React.ElementType = field.level || "h2";
+// ─── Structural: Header ───
+if (field.type === "header") {
+  const HeadingTag: React.ElementType = field.level || "h2";
 
-    const sizeClass =
-      field.level === "h1"
-        ? "text-4xl"
-        : field.level === "h2"
-        ? "text-2xl"
-        : field.level === "h3"
-        ? "text-xl"
-        : field.level === "h4"
-        ? "text-lg"
-        : "text-base"; // h5
+  const sizeClass =
+    field.level === "h1"
+      ? "text-4xl"
+      : field.level === "h2"
+      ? "text-3xl"
+      : field.level === "h3"
+      ? "text-2xl"
+      : field.level === "h4"
+      ? "text-xl"
+      : "text-lg"; // h5
 
-    const widthClass = field.layout === "half" ? "w-1/2" : "w-full";
-    const scaleClass = field.layout === "half" ? "text-sm sm:text-base" : "";
+  const widthClass = field.layout === "half" ? "w-1/2" : "w-full";
 
-    return (
-      <HeadingTag
-        className={`${sizeClass} ${scaleClass} font-semibold text-gray-800 ${widthClass} my-4`}
-      >
-        {field.label || "Header"}
-      </HeadingTag>
-    );
-  }
+  return (
+    <HeadingTag
+      className={`${sizeClass} font-semibold text-gray-800 ${widthClass} my-4`}
+    >
+      {field.label || "Header"}
+    </HeadingTag>
+  );
+}
 
   // ─── Structural: Spacer ───
   if (field.type === "spacer") {

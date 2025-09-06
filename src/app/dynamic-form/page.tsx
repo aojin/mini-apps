@@ -1,3 +1,4 @@
+// /app/dynamic-form/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -38,7 +39,9 @@ function DynamicFormBuilder() {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [counter, setCounter] = useState(0);
 
-  const [previewWidth, setPreviewWidth] = useState<"sm" | "md" | "lg">("lg");
+  // 🔥 separate: preview width vs preview controls
+  const [previewMode, setPreviewMode] = useState<"sm" | "md" | "lg">("lg");
+  const [isPreview, setIsPreview] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // ─── Default Field Template ───
@@ -98,7 +101,7 @@ function DynamicFormBuilder() {
     const checkSize = () => {
       const mobile = window.innerWidth < 640;
       setIsMobile(mobile);
-      if (mobile) setPreviewWidth("sm");
+      if (mobile) setPreviewMode("sm");
     };
     checkSize();
     window.addEventListener("resize", checkSize);
@@ -111,60 +114,55 @@ function DynamicFormBuilder() {
     setEditingFieldId(null);
   };
 
-  // put this at top of DynamicFormBuilder
-const nextIdRef = React.useRef(0);
+  const nextIdRef = React.useRef(0);
 
-// ─── Add field ───
-const addField = () => {
-  if (!newField.label.trim() || !newField.name.trim() || !newField.type) return;
+  // ─── Add field ───
+  const addField = () => {
+    if (!newField.label.trim() || !newField.name.trim() || !newField.type) return;
 
-  nextIdRef.current += 1; // ✅ safe increment
-  const id = nextIdRef.current;
+    nextIdRef.current += 1;
+    const id = nextIdRef.current;
 
-  const f = { ...newField, id };
-  setFields((prev) => [...prev, f]);
+    const f = { ...newField, id };
+    setFields((prev) => [...prev, f]);
 
-  // ✅ seed default value into formData
-  const defVal = computeDefaultValue(f);
-  if (defVal) {
-    setFormData((prev) => ({ ...prev, [f.name]: defVal }));
-  }
+    const defVal = computeDefaultValue(f);
+    if (defVal) {
+      setFormData((prev) => ({ ...prev, [f.name]: defVal }));
+    }
 
-  resetBuilderForm();
-};
-
-// ─── Insert structural block ───
-const insertBlock = (
-  index: number,
-  type: "header" | "subheader" | "spacer"
-) => {
-  nextIdRef.current += 1; // ✅ safe increment
-  const id = nextIdRef.current;
-
-  const block: FieldConfig = {
-    id,
-    type,
-    layout: "full", // default, can toggle later
-    label: type === "spacer" ? "" : type === "header" ? "Header" : "Subheader",
-    ...(type === "header" && { level: "h2" }),
-    ...(type === "subheader" && { level: "h3" }),
-    ...(type === "spacer" && { spacerSize: "md" }),
-    name: `${type}_${id}`,
+    resetBuilderForm();
   };
 
-  setFields((prev) => {
-    const copy = [...prev];
-    let target = index < 0 ? 0 : index + 1;
-    if (target > copy.length) target = copy.length;
-    copy.splice(target, 0, block);
-    return copy;
-  });
+  const insertBlock = (
+    index: number,
+    type: "header" | "spacer",
+    variant: "header" | "subheader" = "header"
+  ) => {
+    nextIdRef.current += 1;
+    const id = nextIdRef.current;
 
-  // force clear builder
-  setNewField({ ...defaultField });
-  setEditingFieldId(null);
-};
+    const block: FieldConfig = {
+      id,
+      type: "header",
+      layout: "full",
+      label: variant === "subheader" ? "Subheader" : "Header",
+      level: variant === "subheader" ? "h3" : "h2",
+      ...(type === "spacer" && { type: "spacer", spacerSize: "md", label: "" }),
+      name: `${variant}_${id}`,
+    };
 
+    setFields((prev) => {
+      const copy = [...prev];
+      let target = index < 0 ? 0 : index + 1;
+      if (target > copy.length) target = copy.length;
+      copy.splice(target, 0, block);
+      return copy;
+    });
+
+    setNewField({ ...defaultField });
+    setEditingFieldId(null);
+  };
 
   // ─── Update existing field ───
   const updateField = () => {
@@ -175,7 +173,6 @@ const insertBlock = (
       )
     );
 
-    // ✅ seed default on update too
     const defVal = computeDefaultValue(newField);
     if (defVal) {
       setFormData((prev) => ({ ...prev, [newField.name]: defVal }));
@@ -241,12 +238,10 @@ const insertBlock = (
     let newErrors: Record<string, string | null> = {};
     let hasError = false;
 
-    // First pass
     fields.forEach((f) => {
-      if (["header", "subheader", "spacer"].includes(f.type)) return;
+      if (["header", "spacer"].includes(f.type)) return;
       let val = formData[f.name] || "";
       if (!val) {
-        // ✅ fallback to defaults at submit time
         val = computeDefaultValue(f);
       }
       const err = runValidators(val, f, { ...formData, [f.name]: val }, fields);
@@ -254,7 +249,6 @@ const insertBlock = (
       newErrors[f.name] = err;
     });
 
-    // Second pass (matchField)
     fields.forEach((f) => {
       if (f.matchField) {
         const val = formData[f.name] || "";
@@ -290,13 +284,9 @@ const insertBlock = (
     setErrors(clearedErrors);
   };
 
-
-
-const updateFieldConfig = (updated: FieldConfig) => {
-  setFields((prev) =>
-    prev.map((f) => (f.id === updated.id ? updated : f))
-  );
-};
+  const updateFieldConfig = (updated: FieldConfig) => {
+    setFields((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
@@ -320,52 +310,64 @@ const updateFieldConfig = (updated: FieldConfig) => {
         {/* Preview */}
         {fields.length > 0 && (
           <div className="flex flex-col items-center w-full overflow-visible">
-            <div className="flex gap-2 mb-4 justify-center">
+            {/* 🔥 Controls row */}
+            <div className="flex w-full justify-between mb-4">
+              {/* Left: Preview toggle */}
               <button
                 type="button"
-                onClick={() => setPreviewWidth("sm")}
+                onClick={() => setIsPreview((p) => !p)}
                 className={`px-3 py-1 rounded ${
-                  previewWidth === "sm"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200"
+                  isPreview ? "bg-green-500 text-white" : "bg-gray-200"
                 }`}
               >
-                Mobile
+                {isPreview ? "Preview On" : "Preview Off"}
               </button>
 
-              {!isMobile && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewWidth("md")}
-                    className={`px-3 py-1 rounded ${
-                      previewWidth === "md"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    Tablet
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewWidth("lg")}
-                    className={`px-3 py-1 rounded ${
-                      previewWidth === "lg"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    Desktop
-                  </button>
-                </>
-              )}
+              {/* Right: Width controls */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("sm")}
+                  className={`px-3 py-1 rounded ${
+                    previewMode === "sm" ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+                >
+                  Mobile
+                </button>
+                {!isMobile && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode("md")}
+                      className={`px-3 py-1 rounded ${
+                        previewMode === "md"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      Tablet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode("lg")}
+                      className={`px-3 py-1 rounded ${
+                        previewMode === "lg"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      Desktop
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             <div
               className={`border rounded bg-gray-50 p-4 transition-all w-full overflow-visible ${
-                previewWidth === "sm"
+                previewMode === "sm"
                   ? "max-w-[375px]"
-                  : previewWidth === "md"
+                  : previewMode === "md"
                   ? "max-w-[768px]"
                   : "max-w-[1280px]"
               }`}
@@ -375,18 +377,19 @@ const updateFieldConfig = (updated: FieldConfig) => {
                 formData={formData}
                 errors={errors}
                 onChange={handleChange}
-                updateFieldConfig={updateFieldConfig}   // ✅ pass down
+                updateFieldConfig={updateFieldConfig}
                 onSubmit={handleSubmit}
                 moveField={moveField}
                 deleteField={deleteField}
                 onEdit={handleEdit}
-                previewMode={previewWidth}
+                previewMode={previewMode}
+                isPreview={isPreview} // 👈 pass toggle down
                 onReset={handleReset}
                 isEditing={editingFieldId !== null}
                 editingFieldId={editingFieldId ?? undefined}
                 resetBuilderForm={resetBuilderForm}
                 insertBlock={insertBlock}
-                />
+              />
             </div>
           </div>
         )}

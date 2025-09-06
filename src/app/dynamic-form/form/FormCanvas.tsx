@@ -5,7 +5,7 @@ import React from "react";
 import { FieldConfig } from "../builder/FieldConfig";
 import FieldRenderer from "./FieldRenderer";
 
-// ✅ Structural block types (unified header only)
+// ✅ Structural block types
 type StructuralType = "header" | "spacer";
 
 export default function FormCanvas({
@@ -19,7 +19,8 @@ export default function FormCanvas({
   moveField,
   deleteField,
   onEdit,
-  previewMode,
+  previewMode, // "sm" | "md" | "lg"
+  isPreview,   // 🔥 toggle to hide builder chrome but keep submit/reset
   isEditing,
   editingFieldId,
   resetBuilderForm,
@@ -36,6 +37,7 @@ export default function FormCanvas({
   deleteField: (index: number) => void;
   onEdit: (field: FieldConfig) => void;
   previewMode: "sm" | "md" | "lg";
+  isPreview: boolean;
   isEditing: boolean;
   editingFieldId?: number;
   resetBuilderForm: () => void;
@@ -49,7 +51,7 @@ export default function FormCanvas({
   const segments: Segment[] = [];
   let buffer: Item[] = [];
 
-  // ─── Build row segments ───
+  // ─── Build row segments based on width only ───
   for (let i = 0; i < fields.length; i++) {
     const f = fields[i];
     const item = { field: f, idx: i };
@@ -65,12 +67,12 @@ export default function FormCanvas({
         buffer.push(item);
       }
     } else {
-      buffer.push(item);
+      buffer.push(item); // sm = single column
     }
   }
   if (buffer.length) segments.push({ type: "columns", items: buffer });
 
-  // ─── Half/Full distribution ───
+  // ─── Distribute half items to left/right lanes ───
   const distributeToLanes = (items: Item[]) => {
     const left: (Item & { lane: "Left" })[] = [];
     const right: (Item & { lane: "Right" })[] = [];
@@ -83,25 +85,26 @@ export default function FormCanvas({
     return { left, right };
   };
 
-  // ─── Structural Toolbar ───
-  const StructuralToolbar = ({ at }: { at: number }) => (
-    <div className="flex gap-2 my-2">
-      {(["header", "spacer"] as const).map((t) => (
-        <button
-          key={t}
-          type="button"
-          className={`text-xs px-2 py-1 rounded border ${
-            t === "header"
-              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-          onClick={() => insertBlock(at, t)}
-        >
-          + {t.charAt(0).toUpperCase() + t.slice(1)}
-        </button>
-      ))}
-    </div>
-  );
+  // ─── Structural Toolbar (hidden in preview) ───
+  const StructuralToolbar = ({ at }: { at: number }) =>
+    isPreview ? null : (
+      <div className="flex gap-2 my-2">
+        {(["header", "spacer"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            className={`text-xs px-2 py-1 rounded border ${
+              t === "header"
+                ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+            onClick={() => insertBlock(at, t)}
+          >
+            + {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+    );
 
   return (
     <form
@@ -112,9 +115,11 @@ export default function FormCanvas({
       noValidate
       className="bg-white p-6 rounded-2xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
+      {!isPreview && (
+        <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
+      )}
 
-      {/* Top toolbar */}
+      {/* Top toolbar (builder only) */}
       <StructuralToolbar at={-1} />
 
       {previewMode === "sm" ? (
@@ -132,10 +137,11 @@ export default function FormCanvas({
               moveField={moveField}
               deleteField={deleteField}
               onEdit={onEdit}
-              previewMode={previewMode}
+              isPreview={isPreview}
               isEditing={isEditing}
               editingFieldId={editingFieldId}
               resetBuilderForm={resetBuilderForm}
+              showBuilderControls={!isPreview}
             />
           ))}
         </div>
@@ -157,10 +163,11 @@ export default function FormCanvas({
                     moveField={moveField}
                     deleteField={deleteField}
                     onEdit={onEdit}
-                    previewMode={previewMode}
+                    isPreview={isPreview}
                     isEditing={isEditing}
                     editingFieldId={editingFieldId}
                     resetBuilderForm={resetBuilderForm}
+                    showBuilderControls={!isPreview}
                   />
                 </div>
               );
@@ -187,10 +194,11 @@ export default function FormCanvas({
                       moveField={moveField}
                       deleteField={deleteField}
                       onEdit={onEdit}
-                      previewMode={previewMode}
+                      isPreview={isPreview}
                       isEditing={isEditing}
                       editingFieldId={editingFieldId}
                       resetBuilderForm={resetBuilderForm}
+                      showBuilderControls={!isPreview}
                     />
                   ))}
                 </div>
@@ -209,10 +217,11 @@ export default function FormCanvas({
                       moveField={moveField}
                       deleteField={deleteField}
                       onEdit={onEdit}
-                      previewMode={previewMode}
+                      isPreview={isPreview}
                       isEditing={isEditing}
                       editingFieldId={editingFieldId}
                       resetBuilderForm={resetBuilderForm}
+                      showBuilderControls={!isPreview}
                     />
                   ))}
                 </div>
@@ -222,9 +231,10 @@ export default function FormCanvas({
         </div>
       )}
 
-      {/* Bottom toolbar */}
+      {/* Bottom toolbar (builder only) */}
       <StructuralToolbar at={fields.length - 1} />
 
+      {/* 🔥 Always show Submit/Reset so validation works */}
       <div className="mt-6 flex gap-4">
         <button
           type="submit"
@@ -245,36 +255,59 @@ export default function FormCanvas({
 }
 
 // ─── FieldBlock ───
-function FieldBlock({ ...props }) {
-  const {
-    field,
-    fields,
-    formData,
-    errors,
-    globalIdx,
-    onChange,
-    updateFieldConfig,
-    moveField,
-    deleteField,
-    onEdit,
-    previewMode,
-    isEditing,
-    editingFieldId,
-    resetBuilderForm,
-    lane,
-  } = props;
-
+function FieldBlock({
+  field,
+  fields,
+  formData,
+  errors,
+  globalIdx,
+  onChange,
+  updateFieldConfig,
+  moveField,
+  deleteField,
+  onEdit,
+  isPreview,
+  isEditing,
+  editingFieldId,
+  resetBuilderForm,
+  lane,
+  showBuilderControls = true,
+}: {
+  field: FieldConfig;
+  fields: FieldConfig[];
+  formData: Record<string, string>;
+  errors: Record<string, string | null>;
+  globalIdx: number;
+  onChange: (f: FieldConfig, v: string, err?: string | null) => void;
+  updateFieldConfig: (f: FieldConfig) => void;
+  moveField: (index: number, dir: "up" | "down") => void;
+  deleteField: (index: number) => void;
+  onEdit: (field: FieldConfig) => void;
+  isPreview: boolean;
+  isEditing: boolean;
+  editingFieldId?: number;
+  resetBuilderForm: () => void;
+  lane?: "Left" | "Right";
+  showBuilderControls?: boolean;
+}) {
   const isCurrentlyEditing = isEditing && editingFieldId === field.id;
   const isStructural = ["header", "spacer"].includes(field.type);
 
   const layoutLabel =
     field.layout === "full" ? "Full" : `Half${lane ? ` (${lane})` : ""}`;
 
+  const wrapperClass = `flex flex-col items-start justify-start w-full ${
+    isPreview ? "" : "border border-gray-200 rounded p-3"
+  }`;
+
   return (
-    <div className="flex flex-col items-start justify-start border border-gray-200 rounded p-3 w-full">
-      <div className="text-xs text-gray-500 mb-1">
-        #{globalIdx + 1} · {layoutLabel} · {field.type}
-      </div>
+    <div className={wrapperClass}>
+      {/* Metadata row – builder only */}
+      {showBuilderControls && (
+        <div className="text-xs text-gray-500 mb-1">
+          #{globalIdx + 1} · {layoutLabel} · {field.type}
+        </div>
+      )}
 
       <div className="w-full">
         <FieldRenderer
@@ -287,8 +320,8 @@ function FieldBlock({ ...props }) {
         />
       </div>
 
-      {/* Inline controls for structural edits */}
-      {isStructural && (
+      {/* Inline structural controls – builder only */}
+      {showBuilderControls && isStructural && (
         <div className="flex flex-wrap gap-2 mt-2 text-xs">
           {field.type === "header" && (
             <>
@@ -306,12 +339,7 @@ function FieldBlock({ ...props }) {
                 onChange={(e) =>
                   updateFieldConfig({
                     ...field,
-                    level: e.target.value as
-                      | "h1"
-                      | "h2"
-                      | "h3"
-                      | "h4"
-                      | "h5",
+                    level: e.target.value as "h1" | "h2" | "h3" | "h4" | "h5",
                   })
                 }
                 className="border px-2 py-1 rounded"
@@ -343,7 +371,6 @@ function FieldBlock({ ...props }) {
             </select>
           )}
 
-          {/* Toggle layout */}
           <button
             type="button"
             className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
@@ -359,55 +386,56 @@ function FieldBlock({ ...props }) {
         </div>
       )}
 
-      {/* Always show move + delete */}
-      <div className="flex gap-2 mt-2 flex-wrap">
-        <button
-          type="button"
-          className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={() => moveField(globalIdx, "up")}
-          title="Move up"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={() => moveField(globalIdx, "down")}
-          title="Move down"
-        >
-          ↓
-        </button>
-
-        <button
-          type="button"
-          className={`text-xs px-2 py-1 rounded ${
-            isCurrentlyEditing
-              ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-              : "bg-red-500 text-white hover:bg-red-600"
-          }`}
-          onClick={() => {
-            if (isCurrentlyEditing) return;
-            if (isEditing) resetBuilderForm();
-            deleteField(globalIdx);
-          }}
-          disabled={isCurrentlyEditing}
-          title={isCurrentlyEditing ? "Cannot delete while editing" : "Delete"}
-        >
-          ✕
-        </button>
-
-        {/* Only non-structural get ✎ edit */}
-        {!isStructural && (
+      {/* Action buttons – builder only */}
+      {showBuilderControls && (
+        <div className="flex gap-2 mt-2 flex-wrap">
           <button
             type="button"
-            className="text-xs px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
-            onClick={() => onEdit(field)}
-            title="Edit"
+            className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            onClick={() => moveField(globalIdx, "up")}
+            title="Move up"
           >
-            ✎
+            ↑
           </button>
-        )}
-      </div>
+          <button
+            type="button"
+            className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            onClick={() => moveField(globalIdx, "down")}
+            title="Move down"
+          >
+            ↓
+          </button>
+
+          <button
+            type="button"
+            className={`text-xs px-2 py-1 rounded ${
+              isCurrentlyEditing
+                ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                : "bg-red-500 text-white hover:bg-red-600"
+            }`}
+            onClick={() => {
+              if (isCurrentlyEditing) return;
+              if (isEditing) resetBuilderForm();
+              deleteField(globalIdx);
+            }}
+            disabled={isCurrentlyEditing}
+            title={isCurrentlyEditing ? "Cannot delete while editing" : "Delete"}
+          >
+            ✕
+          </button>
+
+          {!isStructural && (
+            <button
+              type="button"
+              className="text-xs px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
+              onClick={() => onEdit(field)}
+              title="Edit"
+            >
+              ✎
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
