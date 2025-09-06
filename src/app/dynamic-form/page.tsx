@@ -234,7 +234,7 @@ function DynamicFormBuilder() {
   };
 
   // ─── Submit ───
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): boolean => {
     e.preventDefault();
     let newErrors: Record<string, string | null> = {};
     let hasError = false;
@@ -265,11 +265,12 @@ function DynamicFormBuilder() {
 
     if (hasError) {
       addToast("Form has errors. Please fix them.", "error");
-      return;
+      return false; // 🔥 validation failed
     }
 
     addToast("Form submitted successfully!", "success");
     console.log("Form Data:", formData);
+    return true; // 🔥 success!
   };
 
   // ─── Reset ───
@@ -321,7 +322,7 @@ function DynamicFormBuilder() {
                   isPreview ? "bg-green-500 text-white" : "bg-gray-200"
                 }`}
               >
-                {isPreview ? "Preview On" : "Preview Off"}
+                {isPreview ? "Toggle Preview Off" : "Toggle Preview On"}
               </button>
 
               {/* Right: Width controls */}

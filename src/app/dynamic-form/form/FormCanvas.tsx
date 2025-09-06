@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { FieldConfig } from "../builder/FieldConfig";
 import FieldRenderer from "./FieldRenderer";
-import FormSummary from "./FormSummary"; // ✅ new summary modal
+import FormSummary from "./FormSummary"; // ✅ summary modal
 
 // ✅ Structural block types
 type StructuralType = "header" | "spacer";
@@ -21,7 +21,7 @@ export default function FormCanvas({
   deleteField,
   onEdit,
   previewMode, // "sm" | "md" | "lg"
-  isPreview, // 🔥 toggle to hide builder chrome but keep submit/reset
+  isPreview,   // hide builder chrome but keep submit/reset
   isEditing,
   editingFieldId,
   resetBuilderForm,
@@ -32,7 +32,8 @@ export default function FormCanvas({
   errors: Record<string, string | null>;
   onChange: (f: FieldConfig, v: string, err?: string | null) => void;
   updateFieldConfig: (f: FieldConfig) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  // 🔥 onSubmit now returns boolean for success/fail
+  onSubmit: (e: React.FormEvent) => boolean;
   onReset: () => void;
   moveField: (index: number, dir: "up" | "down") => void;
   deleteField: (index: number) => void;
@@ -116,11 +117,11 @@ export default function FormCanvas({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit(e);
-
-          // ✅ After successful validation, trigger summary modal
-          setSubmittedData(formData);
-          setShowSummary(true);
+          const success = onSubmit(e); // 🔥 use boolean result
+          if (success) {
+            setSubmittedData(formData);
+            setShowSummary(true);
+          }
         }}
         noValidate
         className="bg-white p-6 rounded-2xl shadow space-y-4"
