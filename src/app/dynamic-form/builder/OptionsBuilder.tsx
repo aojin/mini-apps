@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { FieldConfig, FieldOption } from "./FieldConfig";
+import { FieldOption } from "./FieldConfig";
+import { BuilderFieldConfig } from "./FieldBuilder"; // ✅ use builder type
 
 export default function OptionsBuilder({
   field,
   setField,
 }: {
-  field: FieldConfig;
-  setField: (f: FieldConfig) => void;
+  field: BuilderFieldConfig;
+  setField: (f: BuilderFieldConfig) => void;
 }) {
   if (!["checkbox", "radio-group", "select"].includes(field.type)) return null;
 
@@ -18,17 +19,17 @@ export default function OptionsBuilder({
     val: string | boolean
   ) => {
     const updated = [...(field.options || [])];
-    updated[idx] = { ...updated[idx], [key]: val as any };
+    updated[idx] = { ...updated[idx], [key]: val };
     setField({ ...field, options: updated });
   };
 
   const toggleDefault = (idx: number, checked: boolean) => {
     const updated = [...(field.options || [])];
     if (checked) {
-      // Only one default at a time
+      // radio/select → only one default allowed
       updated.forEach((o, i) => (o.default = i === idx));
     } else {
-      // Allow none selected (for select only)
+      // select → allow none selected
       updated[idx].default = false;
     }
     setField({ ...field, options: updated });
@@ -39,7 +40,7 @@ export default function OptionsBuilder({
       ...field,
       options: [
         ...(field.options || []),
-        { label: "", value: "" }, // required but starts blank
+        { label: "", value: "" }, // start blank
       ],
     });
   };
@@ -119,7 +120,7 @@ export default function OptionsBuilder({
                   onChange={(e) => updateOption(i, "value", e.target.value)}
                 />
 
-                {/* Checkbox = multiple allowed */}
+                {/* Checkbox → multiple defaults */}
                 {field.type === "checkbox" && (
                   <label className="flex items-center gap-1">
                     <input
@@ -133,7 +134,7 @@ export default function OptionsBuilder({
                   </label>
                 )}
 
-                {/* Radio-group = always single default */}
+                {/* Radio → single default */}
                 {field.type === "radio-group" && (
                   <label className="flex items-center gap-1">
                     <input
@@ -146,7 +147,7 @@ export default function OptionsBuilder({
                   </label>
                 )}
 
-                {/* Select = toggleable default */}
+                {/* Select → toggle default */}
                 {field.type === "select" && (
                   <label className="flex items-center gap-1">
                     <input
@@ -189,7 +190,7 @@ export default function OptionsBuilder({
         Add Option
       </button>
 
-      {/* Error banner if any blank options exist */}
+      {/* Error banner */}
       {hasEmptyOptions && (
         <p className="text-red-600 text-sm font-medium border border-red-300 bg-red-50 px-3 py-2 rounded mt-2">
           All options must have both label and value filled in.

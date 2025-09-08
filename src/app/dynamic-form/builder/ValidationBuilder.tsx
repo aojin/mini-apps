@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { FieldConfig } from "./FieldConfig";
+import { BuilderFieldConfig } from "./FieldBuilder"; // ✅ builder-safe type
 
 export default function ValidationBuilder({
   field,
   setField,
 }: {
-  field: FieldConfig;
-  setField: (f: FieldConfig) => void;
+  field: BuilderFieldConfig;
+  setField: (f: BuilderFieldConfig) => void;
 }) {
   return (
     <div className="bg-gray-50 p-6 rounded-xl space-y-6 border w-full">
@@ -300,7 +300,9 @@ export default function ValidationBuilder({
       {(field.type === "number" || field.type === "currency") && (
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-gray-600">
-            {field.type === "currency" ? "Currency Validation" : "Number Validation"}
+            {field.type === "currency"
+              ? "Currency Validation"
+              : "Number Validation"}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Min Value */}

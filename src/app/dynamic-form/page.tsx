@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { ToastProvider, useToast } from "./components/Toast";
-import { FieldConfig } from "./builder/FieldConfig";
+import { FieldConfig, FieldType } from "./builder/FieldConfig";
+import { BuilderFieldConfig } from "./builder/FieldBuilder";
 import { runValidators } from "./form/Validation";
 import FieldBuilder from "./builder/FieldBuilder";
 import FormCanvas from "./form/FormCanvas";
@@ -18,13 +19,15 @@ export default function Page() {
   );
 }
 
+// Extend FieldType with "" for builder draft
+type DraftFieldType = FieldType | "";
+
 function DynamicFormBuilder() {
   const { addToast } = useToast();
 
   const [fields, setFields] = useState<FieldConfig[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
-  const [counter, setCounter] = useState(0);
 
   // 🔥 separate: preview width vs preview toggle
   const [previewMode, setPreviewMode] = useState<"sm" | "md" | "lg">("lg");
@@ -32,9 +35,9 @@ function DynamicFormBuilder() {
   const [isMobile, setIsMobile] = useState(false);
 
   // ─── Default Field Template ───
-  const defaultField: FieldConfig = {
+  const defaultField: BuilderFieldConfig = {
     id: 0,
-    type: "" as any,
+    type: "" as DraftFieldType, // ✅ no any
     label: "",
     name: "",
     ...LayoutConfig["text"],
@@ -80,7 +83,7 @@ function DynamicFormBuilder() {
     cols: undefined,
   };
 
-  const [newField, setNewField] = useState<FieldConfig>(defaultField);
+  const [newField, setNewField] = useState<BuilderFieldConfig>(defaultField);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
 
   // ─── Detect screen width ───
@@ -110,7 +113,11 @@ function DynamicFormBuilder() {
     nextIdRef.current += 1;
     const id = nextIdRef.current;
 
-    const f = { ...newField, id };
+    const f: FieldConfig = {
+      ...newField,
+      id,
+      type: newField.type as FieldType, // ✅ no any
+    };
     setFields((prev) => [...prev, f]);
 
     const defVal = computeDefaultValue(f);
@@ -129,7 +136,7 @@ function DynamicFormBuilder() {
     const block: FieldConfig = {
       id,
       type,
-      layout: "full", // all structural blocks are full
+      layout: "full",
       name: `${type}_${id}`,
       label: type === "header" ? "Header" : "",
       ...(type === "header" && { level: "h2" as const }),
@@ -144,22 +151,26 @@ function DynamicFormBuilder() {
       return copy;
     });
 
-    setNewField({ ...defaultField });
-    setEditingFieldId(null);
+    resetBuilderForm();
   };
 
   // ─── Update existing field ───
   const updateField = () => {
     if (!editingFieldId) return;
+
+    const updated: FieldConfig = {
+      ...newField,
+      id: editingFieldId,
+      type: newField.type as FieldType, // ✅ no any
+    };
+
     setFields((prev) =>
-      prev.map((f) =>
-        f.id === editingFieldId ? { ...newField, id: editingFieldId } : f
-      )
+      prev.map((f) => (f.id === editingFieldId ? updated : f))
     );
 
-    const defVal = computeDefaultValue(newField);
+    const defVal = computeDefaultValue(updated);
     if (defVal) {
-      setFormData((prev) => ({ ...prev, [newField.name]: defVal }));
+      setFormData((prev) => ({ ...prev, [updated.name]: defVal }));
     }
 
     resetBuilderForm();
@@ -219,7 +230,7 @@ function DynamicFormBuilder() {
   // ─── Submit ───
   const handleSubmit = (e: React.FormEvent): boolean => {
     e.preventDefault();
-    let newErrors: Record<string, string | null> = {};
+    const newErrors: Record<string, string | null> = {}; // ✅ const
     let hasError = false;
 
     fields.forEach((f) => {
@@ -281,7 +292,7 @@ function DynamicFormBuilder() {
 
   const cancelEdit = () => {
     setEditingFieldId(null);
-    setNewField({ ...defaultField });
+    resetBuilderForm();
   };
 
   return (

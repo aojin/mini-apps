@@ -14,7 +14,7 @@ interface Group {
   full?: boolean;
 }
 
-export default function FormCanvas(props: {
+interface FormCanvasProps {
   fields: FieldConfig[];
   formData: Record<string, string>;
   errors: Record<string, string | null>;
@@ -31,26 +31,26 @@ export default function FormCanvas(props: {
   editingFieldId?: number;
   resetBuilderForm: () => void;
   insertBlock: (at: number, type: StructuralType) => void;
-}) {
-  const {
-    fields,
-    formData,
-    errors,
-    onChange,
-    updateFieldConfig,
-    onSubmit,
-    onReset,
-    moveField,
-    deleteField,
-    onEdit,
-    previewMode,
-    isPreview,
-    isEditing,
-    editingFieldId,
-    resetBuilderForm,
-    insertBlock,
-  } = props;
+}
 
+export default function FormCanvas({
+  fields,
+  formData,
+  errors,
+  onChange,
+  updateFieldConfig,
+  onSubmit,
+  onReset,
+  moveField,
+  deleteField,
+  onEdit,
+  previewMode,
+  isPreview,
+  isEditing,
+  editingFieldId,
+  resetBuilderForm,
+  insertBlock,
+}: FormCanvasProps) {
   const [showSummary, setShowSummary] = useState(false);
   const [submittedData, setSubmittedData] = useState<Record<string, string>>({});
 
@@ -59,12 +59,10 @@ export default function FormCanvas(props: {
   let buffer: { field: FieldConfig; idx: number }[] = [];
 
   fields.forEach((field, idx) => {
-    // Hide spacer if flagged for mobile preview
     if (isPreview && previewMode === "sm" && field.type === "spacer" && field.hideOnMobile) {
       return;
     }
 
-    // Always full width for headers
     if (field.type === "header" || field.layout === "full") {
       if (buffer.length > 0) {
         groups.push({
@@ -81,7 +79,6 @@ export default function FormCanvas(props: {
       return;
     }
 
-    // Inputs and spacers can be half/full
     buffer.push({ field, idx });
     if (buffer.length === 2) {
       groups.push({
@@ -125,7 +122,9 @@ export default function FormCanvas(props: {
           if (success) {
             setSubmittedData(formData);
             setShowSummary(true);
-          } else setShowSummary(false);
+          } else {
+            setShowSummary(false);
+          }
         }}
         noValidate
         className="bg-white p-6 rounded-2xl shadow space-y-4"
@@ -140,7 +139,21 @@ export default function FormCanvas(props: {
                 {[...g.leftFields, ...g.rightFields].map(({ field, idx }) => (
                   <FieldBlock
                     key={field.id}
-                    {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                    field={field}
+                    globalIdx={idx}
+                    fields={fields}
+                    formData={formData}
+                    errors={errors}
+                    onChange={onChange}
+                    updateFieldConfig={updateFieldConfig}
+                    moveField={moveField}
+                    deleteField={deleteField}
+                    onEdit={onEdit}
+                    isPreview={isPreview}
+                    isEditing={isEditing}
+                    editingFieldId={editingFieldId}
+                    resetBuilderForm={resetBuilderForm}
+                    showBuilderControls={!isPreview}
                   />
                 ))}
               </div>
@@ -154,7 +167,21 @@ export default function FormCanvas(props: {
                   {g.leftFields.map(({ field, idx }) => (
                     <FieldBlock
                       key={field.id}
-                      {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                      field={field}
+                      globalIdx={idx}
+                      fields={fields}
+                      formData={formData}
+                      errors={errors}
+                      onChange={onChange}
+                      updateFieldConfig={updateFieldConfig}
+                      moveField={moveField}
+                      deleteField={deleteField}
+                      onEdit={onEdit}
+                      isPreview={isPreview}
+                      isEditing={isEditing}
+                      editingFieldId={editingFieldId}
+                      resetBuilderForm={resetBuilderForm}
+                      showBuilderControls={!isPreview}
                     />
                   ))}
                 </div>
@@ -164,7 +191,21 @@ export default function FormCanvas(props: {
                     {g.leftFields.map(({ field, idx }) => (
                       <FieldBlock
                         key={field.id}
-                        {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                        field={field}
+                        globalIdx={idx}
+                        fields={fields}
+                        formData={formData}
+                        errors={errors}
+                        onChange={onChange}
+                        updateFieldConfig={updateFieldConfig}
+                        moveField={moveField}
+                        deleteField={deleteField}
+                        onEdit={onEdit}
+                        isPreview={isPreview}
+                        isEditing={isEditing}
+                        editingFieldId={editingFieldId}
+                        resetBuilderForm={resetBuilderForm}
+                        showBuilderControls={!isPreview}
                       />
                     ))}
                   </div>
@@ -172,7 +213,21 @@ export default function FormCanvas(props: {
                     {g.rightFields.map(({ field, idx }) => (
                       <FieldBlock
                         key={field.id}
-                        {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                        field={field}
+                        globalIdx={idx}
+                        fields={fields}
+                        formData={formData}
+                        errors={errors}
+                        onChange={onChange}
+                        updateFieldConfig={updateFieldConfig}
+                        moveField={moveField}
+                        deleteField={deleteField}
+                        onEdit={onEdit}
+                        isPreview={isPreview}
+                        isEditing={isEditing}
+                        editingFieldId={editingFieldId}
+                        resetBuilderForm={resetBuilderForm}
+                        showBuilderControls={!isPreview}
                       />
                     ))}
                   </div>
@@ -206,6 +261,24 @@ export default function FormCanvas(props: {
 }
 
 // ─── Field Block ───
+interface FieldBlockProps {
+  field: FieldConfig;
+  globalIdx: number;
+  fields: FieldConfig[];
+  formData: Record<string, string>;
+  errors: Record<string, string | null>;
+  onChange: (f: FieldConfig, v: string, err?: string | null) => void;
+  updateFieldConfig: (f: FieldConfig) => void;
+  moveField: (index: number, dir: "up" | "down") => void;
+  deleteField: (index: number) => void;
+  onEdit: (field: FieldConfig) => void;
+  isPreview: boolean;
+  isEditing: boolean;
+  editingFieldId?: number;
+  resetBuilderForm: () => void;
+  showBuilderControls: boolean;
+}
+
 function FieldBlock({
   field,
   fields,
@@ -222,7 +295,7 @@ function FieldBlock({
   editingFieldId,
   resetBuilderForm,
   showBuilderControls,
-}: any) {
+}: FieldBlockProps) {
   const isCurrentlyEditing = isEditing && editingFieldId === field.id;
   const isStructural = ["header", "spacer"].includes(field.type);
 
@@ -279,7 +352,6 @@ function FieldBlock({
 
           {field.type === "spacer" && (
             <>
-              {/* Spacer size */}
               <select
                 value={field.spacerSize || "md"}
                 onChange={(e) =>
@@ -296,7 +368,6 @@ function FieldBlock({
                 <option value="xl">XL</option>
               </select>
 
-              {/* Spacer layout toggle */}
               <select
                 value={field.layout || "full"}
                 onChange={(e) =>
@@ -311,7 +382,6 @@ function FieldBlock({
                 <option value="half">Half Width</option>
               </select>
 
-              {/* Hide on mobile toggle */}
               <button
                 type="button"
                 onClick={() =>

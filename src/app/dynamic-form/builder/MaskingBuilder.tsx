@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { FieldConfig, MaskType } from "./FieldConfig";
+import { MaskType } from "./FieldConfig";
+import { BuilderFieldConfig } from "./FieldBuilder"; // ✅ import the builder type
 
 export default function MaskingBuilder({
   field,
   setField,
 }: {
-  field: FieldConfig;
-  setField: (f: FieldConfig) => void;
+  field: BuilderFieldConfig;
+  setField: (f: BuilderFieldConfig) => void;
 }) {
   const handleMaskChange = (maskType: MaskType | "") => {
     let pattern: string | undefined;
@@ -72,14 +73,13 @@ export default function MaskingBuilder({
       pattern,
       maxlength,
       placeholder,
-      // reset decimal places if not decimal
       decimalPlaces: maskType === "decimal" ? field.decimalPlaces : undefined,
     });
   };
 
   // 🔹 Auto-apply regex rules for tel, email, url
   useEffect(() => {
-    if (field.type === "tel") {
+    if (field.type === "tel" && field.maskType !== "tel") {
       setField({
         ...field,
         maskType: "tel",
@@ -88,7 +88,8 @@ export default function MaskingBuilder({
         placeholder: "(123) 456-7890",
       });
     }
-    if (field.type === "email") {
+
+    if (field.type === "email" && field.maskType !== "email") {
       setField({
         ...field,
         maskType: "email",
@@ -96,7 +97,8 @@ export default function MaskingBuilder({
         placeholder: "name@example.com",
       });
     }
-    if (field.type === "url") {
+
+    if (field.type === "url" && field.maskType !== "url") {
       setField({
         ...field,
         maskType: "url",
@@ -104,12 +106,13 @@ export default function MaskingBuilder({
         placeholder: "https://example.com",
       });
     }
-  }, [field.type]);
+  }, [field.type, field.maskType]); // ✅ only rerun if type or maskType changes
 
   const isPresetSelected = !!field.maskType && field.maskType !== "custom";
   const supportsMasking = ["text", "tel", "email", "url", "textarea"].includes(
     field.type
   );
+
   if (!supportsMasking) return null;
 
   return (
@@ -169,7 +172,7 @@ export default function MaskingBuilder({
         </div>
       )}
 
-      {/* Custom regex input if "custom" mask selected */}
+      {/* Custom regex input */}
       {field.maskType === "custom" && (
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-600 mb-1">
@@ -185,7 +188,7 @@ export default function MaskingBuilder({
         </div>
       )}
 
-      {/* Placeholder (always editable) */}
+      {/* Placeholder */}
       <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">
           Placeholder
@@ -199,7 +202,7 @@ export default function MaskingBuilder({
         />
       </div>
 
-      {/* Character restriction checkboxes (only if no preset mask) */}
+      {/* Character restriction checkboxes */}
       {!isPresetSelected && field.maskType !== "custom" && (
         <div className="flex flex-wrap gap-4 text-sm text-blue-700">
           <label className="flex items-center gap-2">

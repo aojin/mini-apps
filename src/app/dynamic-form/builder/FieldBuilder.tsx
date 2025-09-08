@@ -8,7 +8,11 @@ import MaskingBuilder from "./MaskingBuilder";
 import ValidationBuilder from "./ValidationBuilder";
 import OptionsBuilder from "./OptionsBuilder";
 
-// Extend FieldType so builder can start with an "empty" type
+// ─── Builder-specific config ───
+export interface BuilderFieldConfig extends Omit<FieldConfig, "type"> {
+  type: FieldType | ""; // allow empty during building
+}
+
 type BuilderFieldType = FieldType | "";
 
 export default function FieldBuilder({
@@ -20,9 +24,9 @@ export default function FieldBuilder({
   isEditing,
   cancelEdit,
 }: {
-  fields: FieldConfig[];
-  newField: FieldConfig;
-  setNewField: (f: FieldConfig) => void;
+  fields: FieldConfig[]; // finalized fields
+  newField: BuilderFieldConfig; // builder field allows ""
+  setNewField: (f: BuilderFieldConfig) => void;
   addField: () => void;
   updateField: () => void;
   isEditing: boolean;
@@ -32,9 +36,9 @@ export default function FieldBuilder({
 
   // ─── Reset builder form ───
   const resetBuilderForm = () => {
-    const emptyField: FieldConfig = {
+    const emptyField: BuilderFieldConfig = {
       id: 0,
-      type: "" as BuilderFieldType,
+      type: "",
       label: "",
       name: "",
       ...LayoutConfig["text"],
@@ -88,11 +92,12 @@ export default function FieldBuilder({
     return true;
   };
 
+  // ─── Save ───
   const handleSave = () => {
     if (!validateNewField()) return;
 
-    // 🚫 skip structural entirely
-    if (["header", "spacer"].includes(newField.type)) {
+    // Skip structural fields entirely
+    if (newField.type === "header" || newField.type === "spacer") {
       resetBuilderForm();
       return;
     }
@@ -104,13 +109,14 @@ export default function FieldBuilder({
     if (isEditing) cancelEdit();
   };
 
+  // ─── Type Change ───
   const handleTypeChange = (newType: BuilderFieldType) => {
     if (!newType) {
       resetBuilderForm();
       return;
     }
 
-    const base: FieldConfig = {
+    const base: BuilderFieldConfig = {
       ...newField,
       type: newType,
       ...LayoutConfig[newType],
@@ -142,6 +148,7 @@ export default function FieldBuilder({
   const isSaveDisabled =
     !newField.type || !newField.name.trim() || !newField.label.trim();
 
+  // ─── Render ───
   return (
     <div className="bg-white p-6 rounded-2xl shadow mb-8 space-y-4 w-full overflow-visible">
       <h2 className="text-xl font-semibold">
