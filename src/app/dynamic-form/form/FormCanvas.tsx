@@ -4,35 +4,22 @@
 import React, { useState } from "react";
 import { FieldConfig } from "../builder/FieldConfig";
 import FieldRenderer from "./FieldRenderer";
-import FormSummary from "./FormSummary"; // ✅ summary modal
+import FormSummary from "./FormSummary";
 
-// ✅ Structural block types
 type StructuralType = "header" | "spacer";
 
-export default function FormCanvas({
-  fields,
-  formData,
-  errors,
-  onChange,
-  updateFieldConfig,
-  onSubmit,
-  onReset,
-  moveField,
-  deleteField,
-  onEdit,
-  previewMode, // "sm" | "md" | "lg"
-  isPreview,   // hide builder chrome but keep submit/reset
-  isEditing,
-  editingFieldId,
-  resetBuilderForm,
-  insertBlock,
-}: {
+interface Group {
+  leftFields: { field: FieldConfig; idx: number }[];
+  rightFields: { field: FieldConfig; idx: number }[];
+  full?: boolean;
+}
+
+export default function FormCanvas(props: {
   fields: FieldConfig[];
   formData: Record<string, string>;
   errors: Record<string, string | null>;
   onChange: (f: FieldConfig, v: string, err?: string | null) => void;
   updateFieldConfig: (f: FieldConfig) => void;
-  // 🔥 onSubmit now returns boolean for success/fail
   onSubmit: (e: React.FormEvent) => boolean;
   onReset: () => void;
   moveField: (index: number, dir: "up" | "down") => void;
@@ -45,53 +32,68 @@ export default function FormCanvas({
   resetBuilderForm: () => void;
   insertBlock: (at: number, type: StructuralType) => void;
 }) {
-  // ─── State for submission summary ───
+  const {
+    fields,
+    formData,
+    errors,
+    onChange,
+    updateFieldConfig,
+    onSubmit,
+    onReset,
+    moveField,
+    deleteField,
+    onEdit,
+    previewMode,
+    isPreview,
+    isEditing,
+    editingFieldId,
+    resetBuilderForm,
+    insertBlock,
+  } = props;
+
   const [showSummary, setShowSummary] = useState(false);
   const [submittedData, setSubmittedData] = useState<Record<string, string>>({});
 
-  type Item = { field: FieldConfig; idx: number };
-  type Segment =
-    | { type: "columns"; items: Item[] }
-    | { type: "full"; item: Item };
+  // ─── Grouping ───
+  const groups: Group[] = [];
+  let buffer: { field: FieldConfig; idx: number }[] = [];
 
-  const segments: Segment[] = [];
-  let buffer: Item[] = [];
+  fields.forEach((field, idx) => {
+    // Only hide spacers if PREVIEW + mobile + flagged
+    if (isPreview && previewMode === "sm" && field.type === "spacer" && field.hideOnMobile) {
+      return;
+    }
 
-  // ─── Build row segments based on width only ───
-  for (let i = 0; i < fields.length; i++) {
-    const f = fields[i];
-    const item = { field: f, idx: i };
-
-    if (previewMode !== "sm") {
-      if (f.layout === "full") {
-        if (buffer.length) {
-          segments.push({ type: "columns", items: buffer });
-          buffer = [];
-        }
-        segments.push({ type: "full", item });
-      } else {
-        buffer.push(item);
+    if (field.layout === "full" || field.type === "header" || field.type === "spacer") {
+      if (buffer.length > 0) {
+        groups.push({
+          leftFields: [buffer[0]],
+          rightFields: buffer[1] ? [buffer[1]] : [],
+        });
+        buffer = [];
       }
-    } else {
-      buffer.push(item); // sm = single column
+      groups.push({
+        full: true,
+        leftFields: [{ field, idx }],
+        rightFields: [],
+      });
+      return;
     }
+
+    buffer.push({ field, idx });
+    if (buffer.length === 2) {
+      groups.push({
+        leftFields: [buffer[0]],
+        rightFields: [buffer[1]],
+      });
+      buffer = [];
+    }
+  });
+
+  if (buffer.length === 1) {
+    groups.push({ leftFields: [buffer[0]], rightFields: [] });
   }
-  if (buffer.length) segments.push({ type: "columns", items: buffer });
 
-  // ─── Distribute half items to left/right lanes ───
-  const distributeToLanes = (items: Item[]) => {
-    const left: (Item & { lane: "Left" })[] = [];
-    const right: (Item & { lane: "Right" })[] = [];
-    let toggle = true;
-    for (const it of items) {
-      if (toggle) left.push({ ...it, lane: "Left" });
-      else right.push({ ...it, lane: "Right" });
-      toggle = !toggle;
-    }
-    return { left, right };
-  };
-
-  // ─── Structural Toolbar (hidden in preview) ───
   const StructuralToolbar = ({ at }: { at: number }) =>
     isPreview ? null : (
       <div className="flex gap-2 my-2">
@@ -117,140 +119,77 @@ export default function FormCanvas({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const success = onSubmit(e); // 🔥 use boolean result
+          const success = onSubmit(e);
           if (success) {
             setSubmittedData(formData);
             setShowSummary(true);
-          }
+          } else setShowSummary(false);
         }}
         noValidate
         className="bg-white p-6 rounded-2xl shadow space-y-4"
       >
-        {!isPreview && (
-          <h2 className="text-xl font-semibold mb-4">Generated Form</h2>
-        )}
-
-        {/* Top toolbar (builder only) */}
+        {!isPreview && <h2 className="text-xl font-semibold mb-4">Generated Form</h2>}
         <StructuralToolbar at={-1} />
 
         {previewMode === "sm" ? (
           <div className="flex flex-col gap-4">
-            {fields.map((field, idx) => (
-              <FieldBlock
-                key={field.id}
-                field={field}
-                fields={fields}
-                formData={formData}
-                errors={errors}
-                globalIdx={idx}
-                onChange={onChange}
-                updateFieldConfig={updateFieldConfig}
-                moveField={moveField}
-                deleteField={deleteField}
-                onEdit={onEdit}
-                isPreview={isPreview}
-                isEditing={isEditing}
-                editingFieldId={editingFieldId}
-                resetBuilderForm={resetBuilderForm}
-                showBuilderControls={!isPreview}
-              />
+            {groups.map((g, gi) => (
+              <div key={gi} className="flex flex-col gap-2">
+                {g.leftFields.map(({ field, idx }) => (
+                  <FieldBlock
+                    key={field.id}
+                    {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                  />
+                ))}
+                {g.rightFields.map(({ field, idx }) => (
+                  <FieldBlock
+                    key={field.id}
+                    {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {segments.map((seg, si) => {
-              if (seg.type === "full") {
-                const { field, idx } = seg.item;
-                return (
-                  <div key={`full-${si}`} className="w-full">
+            {groups.map((g, gi) =>
+              g.full ? (
+                <div key={gi} className="w-full flex flex-col gap-2">
+                  {g.leftFields.map(({ field, idx }) => (
                     <FieldBlock
-                      field={field}
-                      fields={fields}
-                      formData={formData}
-                      errors={errors}
-                      globalIdx={idx}
-                      onChange={onChange}
-                      updateFieldConfig={updateFieldConfig}
-                      moveField={moveField}
-                      deleteField={deleteField}
-                      onEdit={onEdit}
-                      isPreview={isPreview}
-                      isEditing={isEditing}
-                      editingFieldId={editingFieldId}
-                      resetBuilderForm={resetBuilderForm}
-                      showBuilderControls={!isPreview}
+                      key={field.id}
+                      {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
                     />
-                  </div>
-                );
-              }
-
-              const { left, right } = distributeToLanes(seg.items);
-              return (
-                <div
-                  key={`cols-${si}`}
-                  className="grid md:grid-cols-2 gap-4 items-start"
-                >
+                  ))}
+                </div>
+              ) : (
+                <div key={gi} className="grid md:grid-cols-2 gap-4 items-start">
                   <div className="flex flex-col gap-4">
-                    {left.map(({ field, idx, lane }) => (
+                    {g.leftFields.map(({ field, idx }) => (
                       <FieldBlock
                         key={field.id}
-                        field={field}
-                        fields={fields}
-                        formData={formData}
-                        errors={errors}
-                        globalIdx={idx}
-                        lane={lane}
-                        onChange={onChange}
-                        updateFieldConfig={updateFieldConfig}
-                        moveField={moveField}
-                        deleteField={deleteField}
-                        onEdit={onEdit}
-                        isPreview={isPreview}
-                        isEditing={isEditing}
-                        editingFieldId={editingFieldId}
-                        resetBuilderForm={resetBuilderForm}
-                        showBuilderControls={!isPreview}
+                        {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
                       />
                     ))}
                   </div>
                   <div className="flex flex-col gap-4">
-                    {right.map(({ field, idx, lane }) => (
+                    {g.rightFields.map(({ field, idx }) => (
                       <FieldBlock
                         key={field.id}
-                        field={field}
-                        fields={fields}
-                        formData={formData}
-                        errors={errors}
-                        globalIdx={idx}
-                        lane={lane}
-                        onChange={onChange}
-                        updateFieldConfig={updateFieldConfig}
-                        moveField={moveField}
-                        deleteField={deleteField}
-                        onEdit={onEdit}
-                        isPreview={isPreview}
-                        isEditing={isEditing}
-                        editingFieldId={editingFieldId}
-                        resetBuilderForm={resetBuilderForm}
-                        showBuilderControls={!isPreview}
+                        {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
                       />
                     ))}
                   </div>
                 </div>
-              );
-            })}
+              )
+            )}
           </div>
         )}
 
-        {/* Bottom toolbar (builder only) */}
         <StructuralToolbar at={fields.length - 1} />
 
-        {/* 🔥 Always show Submit/Reset so validation works */}
         <div className="mt-6 flex gap-4">
-          <button
-            type="submit"
-            className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
-          >
+          <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
             Submit
           </button>
           <button
@@ -263,19 +202,13 @@ export default function FormCanvas({
         </div>
       </form>
 
-      {/* ✅ Summary modal after successful submit */}
       {showSummary && (
-        <FormSummary
-          data={submittedData}
-          fields={fields}
-          onClose={() => setShowSummary(false)}
-        />
+        <FormSummary data={submittedData} fields={fields} onClose={() => setShowSummary(false)} />
       )}
     </>
   );
 }
 
-// ─── FieldBlock ───
 function FieldBlock({
   field,
   fields,
@@ -291,42 +224,21 @@ function FieldBlock({
   isEditing,
   editingFieldId,
   resetBuilderForm,
-  lane,
-  showBuilderControls = true,
-}: {
-  field: FieldConfig;
-  fields: FieldConfig[];
-  formData: Record<string, string>;
-  errors: Record<string, string | null>;
-  globalIdx: number;
-  onChange: (f: FieldConfig, v: string, err?: string | null) => void;
-  updateFieldConfig: (f: FieldConfig) => void;
-  moveField: (index: number, dir: "up" | "down") => void;
-  deleteField: (index: number) => void;
-  onEdit: (field: FieldConfig) => void;
-  isPreview: boolean;
-  isEditing: boolean;
-  editingFieldId?: number;
-  resetBuilderForm: () => void;
-  lane?: "Left" | "Right";
-  showBuilderControls?: boolean;
-}) {
+  showBuilderControls,
+}: any) {
   const isCurrentlyEditing = isEditing && editingFieldId === field.id;
   const isStructural = ["header", "spacer"].includes(field.type);
 
-  const layoutLabel =
-    field.layout === "full" ? "Full" : `Half${lane ? ` (${lane})` : ""}`;
-
-  const wrapperClass = `flex flex-col items-start justify-start w-full ${
-    isPreview ? "" : "border border-gray-200 rounded p-3"
-  }`;
-
   return (
-    <div className={wrapperClass}>
-      {/* Metadata row – builder only */}
+    <div
+      className={`flex flex-col items-start justify-start w-full ${
+        isPreview ? "" : "border border-gray-200 rounded p-3"
+      }`}
+    >
       {showBuilderControls && (
         <div className="text-xs text-gray-500 mb-1">
-          #{globalIdx + 1} · {layoutLabel} · {field.type}
+          #{globalIdx + 1} · {field.layout} · {field.type}
+          {field.type === "spacer" && field.hideOnMobile && " · hidden on mobile"}
         </div>
       )}
 
@@ -341,27 +253,21 @@ function FieldBlock({
         />
       </div>
 
-      {/* Inline structural controls – builder only */}
       {showBuilderControls && isStructural && (
-        <div className="flex flex-wrap gap-2 mt-2 text-xs">
+        <div className="flex flex-wrap gap-2 mt-2 text-xs items-center">
           {field.type === "header" && (
             <>
               <input
                 type="text"
                 value={field.label}
-                onChange={(e) =>
-                  updateFieldConfig({ ...field, label: e.target.value })
-                }
+                onChange={(e) => updateFieldConfig({ ...field, label: e.target.value })}
                 className="border px-2 py-1 rounded text-sm"
                 placeholder="Edit header text"
               />
               <select
                 value={field.level || "h2"}
                 onChange={(e) =>
-                  updateFieldConfig({
-                    ...field,
-                    level: e.target.value as "h1" | "h2" | "h3" | "h4" | "h5",
-                  })
+                  updateFieldConfig({ ...field, level: e.target.value as "h1" | "h2" | "h3" | "h4" | "h5" })
                 }
                 className="border px-2 py-1 rounded"
               >
@@ -391,25 +297,11 @@ function FieldBlock({
               <option value="xl">XL</option>
             </select>
           )}
-
-          <button
-            type="button"
-            className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
-            onClick={() =>
-              updateFieldConfig({
-                ...field,
-                layout: field.layout === "full" ? "half" : "full",
-              })
-            }
-          >
-            Toggle {field.layout === "full" ? "Half" : "Full"}
-          </button>
         </div>
       )}
 
-      {/* Action buttons – builder only */}
       {showBuilderControls && (
-        <div className="flex gap-2 mt-2 flex-wrap">
+        <div className="flex gap-2 mt-2 flex-wrap items-center">
           <button
             type="button"
             className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
@@ -453,6 +345,34 @@ function FieldBlock({
               title="Edit"
             >
               ✎
+            </button>
+          )}
+
+          {/* 🔥 Moved toggle here, inline with other buttons */}
+          {field.type === "spacer" && (
+            <button
+              type="button"
+              onClick={() =>
+                updateFieldConfig({
+                  ...field,
+                  hideOnMobile: !field.hideOnMobile,
+                })
+              }
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${
+                field.hideOnMobile
+                  ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
+                  : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+              }`}
+            >
+              {field.hideOnMobile ? (
+                <>
+                  <span>🙈</span> Hidden on Mobile
+                </>
+              ) : (
+                <>
+                  <span>👁️</span> Visible on Mobile
+                </>
+              )}
             </button>
           )}
         </div>

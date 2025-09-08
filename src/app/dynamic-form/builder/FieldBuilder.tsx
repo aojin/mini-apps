@@ -1,3 +1,4 @@
+// /form/FieldBuilder.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -14,6 +15,7 @@ export default function FieldBuilder({
   addField,
   updateField,
   isEditing,
+  cancelEdit,   // ✅ new prop
 }: {
   fields: FieldConfig[];
   newField: FieldConfig;
@@ -21,6 +23,7 @@ export default function FieldBuilder({
   addField: () => void;
   updateField: () => void;
   isEditing: boolean;
+  cancelEdit: () => void;   // ✅ new prop type
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -41,13 +44,18 @@ export default function FieldBuilder({
     setError(null);
   };
 
+  // ─── Cancel Edit ───
+  const handleCancelEdit = () => {
+    resetBuilderForm();
+    cancelEdit(); // ✅ notify parent to exit edit mode
+  };
+
   // ─── Validation ───
   const validateNewField = (): boolean => {
     if (!newField.type) {
       setError("Type is required.");
       return false;
     }
-
     if (!newField.name.trim()) {
       setError("Name (key) is required.");
       return false;
@@ -56,12 +64,10 @@ export default function FieldBuilder({
       setError("Label is required.");
       return false;
     }
-
     if (fields.some((f) => f.name === newField.name && f.id !== newField.id)) {
       setError(`Field name "${newField.name}" is already in use.`);
       return false;
     }
-
     if (newField.type === "radio-group") {
       if (!newField.options || newField.options.length < 2) {
         setError("Radio groups must have at least 2 options.");
@@ -74,26 +80,25 @@ export default function FieldBuilder({
         return false;
       }
     }
-
     setError(null);
     return true;
   };
 
   const handleSave = () => {
-  if (!validateNewField()) return;
+    if (!validateNewField()) return;
 
-  // 🚫 skip structural entirely
-  if (["header", "subheader", "spacer"].includes(newField.type)) {
+    // 🚫 skip structural entirely
+    if (["header", "spacer"].includes(newField.type)) {
+      resetBuilderForm();
+      return;
+    }
+
+    if (isEditing) updateField();
+    else addField();
+
     resetBuilderForm();
-    return;
-  }
-
-  if (isEditing) updateField();
-  else addField();
-
-  resetBuilderForm();
-};
-
+    if (isEditing) cancelEdit(); // ✅ after updating, exit edit mode
+  };
 
   const handleTypeChange = (newType: FieldType | "") => {
     if (!newType) {
@@ -121,6 +126,9 @@ export default function FieldBuilder({
         break;
       case "select":
         base.options = [{ label: "Option 1", value: "opt1" }];
+        break;
+      case "currency":
+        base.placeholder = "$0.00";
         break;
     }
 
@@ -150,6 +158,7 @@ export default function FieldBuilder({
             <option value="text">Text</option>
             <option value="email">Email</option>
             <option value="number">Number</option>
+            <option value="currency">Currency</option>
             <option value="password">Password</option>
             <option value="url">URL</option>
             <option value="tel">Telephone</option>
@@ -248,6 +257,7 @@ export default function FieldBuilder({
         >
           {isEditing ? "Update Field" : "Add Field"}
         </button>
+
         <button
           type="button"
           onClick={resetBuilderForm}
@@ -255,6 +265,16 @@ export default function FieldBuilder({
         >
           Clear Builder Form
         </button>
+
+        {isEditing && (
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
+          >
+            Cancel Edit
+          </button>
+        )}
       </div>
     </div>
   );

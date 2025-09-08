@@ -8,6 +8,7 @@ import { runValidators } from "./form/Validation";
 import FieldBuilder from "./builder/FieldBuilder";
 import FormCanvas from "./form/FormCanvas";
 import { LayoutConfig } from "./layout/LayoutConfig";
+import { computeDefaultValue } from "./form/utils";
 
 export default function Page() {
   return (
@@ -15,20 +16,6 @@ export default function Page() {
       <DynamicFormBuilder />
     </ToastProvider>
   );
-}
-
-// ─── Default Value Helper ───
-function computeDefaultValue(field: FieldConfig): string {
-  if (field.type === "select" || field.type === "radio-group") {
-    return field.options?.find((o) => o.default)?.value ?? "";
-  }
-  if (field.type === "checkbox") {
-    const checkedVals = (field.options ?? [])
-      .filter((o) => o.checked)
-      .map((o) => o.value);
-    return checkedVals.join(",");
-  }
-  return "";
 }
 
 function DynamicFormBuilder() {
@@ -134,23 +121,19 @@ function DynamicFormBuilder() {
     resetBuilderForm();
   };
 
-  // ─── Insert header or spacer ───
-  const insertBlock = (
-    index: number,
-    type: "header" | "spacer",
-    variant: "header" | "subheader" = "header"
-  ) => {
+  // ─── Insert structural block (header, spacer) ───
+  const insertBlock = (index: number, type: "header" | "spacer") => {
     nextIdRef.current += 1;
     const id = nextIdRef.current;
 
     const block: FieldConfig = {
       id,
-      type: "header",
-      layout: "full",
-      label: variant === "subheader" ? "Subheader" : "Header",
-      level: variant === "subheader" ? "h3" : "h2",
-      ...(type === "spacer" && { type: "spacer", spacerSize: "md", label: "" }),
-      name: `${variant}_${id}`,
+      type,
+      layout: "full", // all structural blocks are full
+      name: `${type}_${id}`,
+      label: type === "header" ? "Header" : "",
+      ...(type === "header" && { level: "h2" as const }),
+      ...(type === "spacer" && { spacerSize: "md" as const }),
     };
 
     setFields((prev) => {
@@ -241,10 +224,16 @@ function DynamicFormBuilder() {
 
     fields.forEach((f) => {
       if (["header", "spacer"].includes(f.type)) return;
-      let val = formData[f.name] || "";
-      if (!val) {
+
+      let val = formData[f.name] ?? "";
+
+      if (
+        !val &&
+        !["checkbox", "radio-group", "select", "file"].includes(f.type)
+      ) {
         val = computeDefaultValue(f);
       }
+
       const err = runValidators(val, f, { ...formData, [f.name]: val }, fields);
       if (err) hasError = true;
       newErrors[f.name] = err;
@@ -252,7 +241,7 @@ function DynamicFormBuilder() {
 
     fields.forEach((f) => {
       if (f.matchField) {
-        const val = formData[f.name] || "";
+        const val = formData[f.name] ?? "";
         const err = runValidators(val, f, formData, fields);
         if (err) {
           hasError = true;
@@ -265,12 +254,12 @@ function DynamicFormBuilder() {
 
     if (hasError) {
       addToast("Form has errors. Please fix them.", "error");
-      return false; // 🔥 validation failed
+      return false;
     }
 
     addToast("Form submitted successfully!", "success");
     console.log("Form Data:", formData);
-    return true; // 🔥 success!
+    return true;
   };
 
   // ─── Reset ───
@@ -290,6 +279,11 @@ function DynamicFormBuilder() {
     setFields((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
   };
 
+  const cancelEdit = () => {
+    setEditingFieldId(null);
+    setNewField({ ...defaultField });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
       <h1 className="text-3xl font-bold text-center mb-6">
@@ -305,6 +299,7 @@ function DynamicFormBuilder() {
             addField={addField}
             updateField={updateField}
             isEditing={editingFieldId !== null}
+            cancelEdit={cancelEdit}
             fields={fields}
           />
         </div>
@@ -314,7 +309,6 @@ function DynamicFormBuilder() {
           <div className="flex flex-col items-center w-full overflow-visible">
             {/* 🔥 Sticky controls */}
             <div className="sticky top-0 z-10 flex w-full justify-between mb-4 bg-gray-100 py-2">
-              {/* Left: Preview toggle */}
               <button
                 type="button"
                 onClick={() => setIsPreview((p) => !p)}
@@ -325,7 +319,6 @@ function DynamicFormBuilder() {
                 {isPreview ? "Toggle Preview Off" : "Toggle Preview On"}
               </button>
 
-              {/* Right: Width controls */}
               <div className="flex gap-2">
                 <button
                   type="button"

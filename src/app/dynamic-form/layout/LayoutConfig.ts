@@ -31,6 +31,13 @@ export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
     margin: "mb-4",
     padding: "p-2",
   },
+    currency: {
+    layout: "half",
+    align: "start",
+    justify: "start",
+    margin: "mb-4",
+    padding: "p-2",
+  },
   password: {
     layout: "half",
     align: "start",
@@ -67,7 +74,7 @@ export const LayoutConfig: Record<FieldType, LayoutDefaults> = {
     padding: "p-2",
   },
   file: {
-    layout: "full",
+    layout: "half",
     align: "start",
     justify: "start",
     margin: "mb-6",

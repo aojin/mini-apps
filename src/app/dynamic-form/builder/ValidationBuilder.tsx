@@ -49,9 +49,7 @@ export default function ValidationBuilder({
                 className="border p-2 rounded"
                 value={field.minlength ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMax =
                     field.maxlength !== undefined &&
                     val !== undefined &&
@@ -71,9 +69,7 @@ export default function ValidationBuilder({
                 className="border p-2 rounded"
                 value={field.maxlength ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMin =
                     field.minlength !== undefined &&
                     val !== undefined &&
@@ -107,9 +103,7 @@ export default function ValidationBuilder({
           {/* String rules */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="flex flex-col">
-              <label className="text-sm text-gray-600 mb-1">
-                Must start with
-              </label>
+              <label className="text-sm text-gray-600 mb-1">Must start with</label>
               <input
                 type="text"
                 className="border p-2 rounded"
@@ -183,7 +177,7 @@ export default function ValidationBuilder({
                   setField({ ...field, noWhitespace: e.target.checked })
                 }
               />
-              No whitespace (single word only)
+              No whitespace
             </label>
           </div>
 
@@ -198,9 +192,7 @@ export default function ValidationBuilder({
                   className="border p-2 rounded"
                   value={field.minWords ?? ""}
                   onChange={(e) => {
-                    const val = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
+                    const val = e.target.value ? Number(e.target.value) : undefined;
                     const newMax =
                       field.maxWords !== undefined &&
                       val !== undefined &&
@@ -219,9 +211,7 @@ export default function ValidationBuilder({
                   className="border p-2 rounded"
                   value={field.maxWords ?? ""}
                   onChange={(e) => {
-                    const val = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
+                    const val = e.target.value ? Number(e.target.value) : undefined;
                     const newMin =
                       field.minWords !== undefined &&
                       val !== undefined &&
@@ -235,11 +225,9 @@ export default function ValidationBuilder({
             </div>
           )}
 
-          {/* Allowed / Disallowed Values */}
+          {/* Allowed / Disallowed */}
           <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">
-              Allowed Values (CSV)
-            </label>
+            <label className="text-sm text-gray-600 mb-1">Allowed Values (CSV)</label>
             <input
               type="text"
               className="border p-2 rounded"
@@ -273,7 +261,7 @@ export default function ValidationBuilder({
             />
           </div>
 
-          {/* Regex */}
+          {/* Regex + Match */}
           <div className="flex flex-col">
             <label className="text-sm text-gray-600 mb-1">Custom regex</label>
             <input
@@ -283,27 +271,19 @@ export default function ValidationBuilder({
               onChange={(e) => setField({ ...field, pattern: e.target.value })}
             />
           </div>
-
-          {/* Match Field */}
           <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">
-              Match Field (name)
-            </label>
+            <label className="text-sm text-gray-600 mb-1">Match Field (name)</label>
             <input
               type="text"
               className="border p-2 rounded"
               value={field.matchField ?? ""}
-              onChange={(e) =>
-                setField({ ...field, matchField: e.target.value })
-              }
+              onChange={(e) => setField({ ...field, matchField: e.target.value })}
             />
           </div>
 
           {/* Custom Error */}
           <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">
-              Custom Error Message
-            </label>
+            <label className="text-sm text-gray-600 mb-1">Custom Error Message</label>
             <input
               type="text"
               className="border p-2 rounded"
@@ -316,10 +296,12 @@ export default function ValidationBuilder({
         </div>
       )}
 
-      {/* ─── Number Validation ─── */}
-      {field.type === "number" && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-600">Number Validation</h4>
+      {/* ─── Number & Currency Validation ─── */}
+      {(field.type === "number" || field.type === "currency") && (
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium text-gray-600">
+            {field.type === "currency" ? "Currency Validation" : "Number Validation"}
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Min Value */}
             <div className="flex flex-col">
@@ -329,9 +311,7 @@ export default function ValidationBuilder({
                 className="border p-2 rounded"
                 value={field.minValue ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMax =
                     field.maxValue !== undefined &&
                     val !== undefined &&
@@ -350,9 +330,7 @@ export default function ValidationBuilder({
                 className="border p-2 rounded"
                 value={field.maxValue ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMin =
                     field.minValue !== undefined &&
                     val !== undefined &&
@@ -384,7 +362,7 @@ export default function ValidationBuilder({
             </div>
           </div>
 
-          {/* Extra Number Rules */}
+          {/* Extra Rules */}
           <div className="flex flex-wrap gap-4 text-sm text-gray-700 mt-2">
             <label className="flex items-center gap-2">
               <input
@@ -417,9 +395,7 @@ export default function ValidationBuilder({
               Integer only
             </label>
             <div className="flex flex-col w-32">
-              <label className="text-sm text-gray-600 mb-1">
-                Decimal places
-              </label>
+              <label className="text-sm text-gray-600 mb-1">Decimal places</label>
               <input
                 type="number"
                 min={0}
@@ -436,6 +412,42 @@ export default function ValidationBuilder({
               />
             </div>
           </div>
+
+          {/* Allowed / Disallowed Values */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 mb-1">Allowed Values (CSV)</label>
+            <input
+              type="text"
+              className="border p-2 rounded"
+              value={field.allowedValues?.join(",") ?? ""}
+              onChange={(e) =>
+                setField({
+                  ...field,
+                  allowedValues: e.target.value
+                    ? e.target.value.split(",").map((s) => s.trim())
+                    : undefined,
+                })
+              }
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 mb-1">
+              Disallowed Values (CSV)
+            </label>
+            <input
+              type="text"
+              className="border p-2 rounded"
+              value={field.disallowedValues?.join(",") ?? ""}
+              onChange={(e) =>
+                setField({
+                  ...field,
+                  disallowedValues: e.target.value
+                    ? e.target.value.split(",").map((s) => s.trim())
+                    : undefined,
+                })
+              }
+            />
+          </div>
         </div>
       )}
 
@@ -444,7 +456,6 @@ export default function ValidationBuilder({
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-600">Date Validation</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Min Date */}
             <div className="flex flex-col">
               <label className="text-sm text-gray-600 mb-1">Min Date</label>
               <input
@@ -464,7 +475,6 @@ export default function ValidationBuilder({
                 }}
               />
             </div>
-            {/* Max Date */}
             <div className="flex flex-col">
               <label className="text-sm text-gray-600 mb-1">Max Date</label>
               <input
@@ -516,9 +526,7 @@ export default function ValidationBuilder({
               Allow multiple files
             </label>
             <div className="flex flex-col md:col-span-2">
-              <label className="text-sm text-gray-600 mb-1">
-                Max File Size (MB)
-              </label>
+              <label className="text-sm text-gray-600 mb-1">Max File Size (MB)</label>
               <input
                 type="number"
                 min={1}
@@ -541,24 +549,17 @@ export default function ValidationBuilder({
       {/* ─── Checkbox Validation ─── */}
       {field.type === "checkbox" && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-600">
-            Options Validation
-          </h4>
+          <h4 className="text-sm font-medium text-gray-600">Options Validation</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Min selections */}
             <div className="flex flex-col">
-              <label className="text-sm text-gray-600 mb-1">
-                Min Selections
-              </label>
+              <label className="text-sm text-gray-600 mb-1">Min Selections</label>
               <input
                 type="number"
                 min={0}
                 className="border p-2 rounded"
                 value={field.minValue ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMax =
                     field.maxValue !== undefined &&
                     val !== undefined &&
@@ -569,20 +570,15 @@ export default function ValidationBuilder({
                 }}
               />
             </div>
-            {/* Max selections */}
             <div className="flex flex-col">
-              <label className="text-sm text-gray-600 mb-1">
-                Max Selections
-              </label>
+              <label className="text-sm text-gray-600 mb-1">Max Selections</label>
               <input
                 type="number"
                 min={0}
                 className="border p-2 rounded"
                 value={field.maxValue ?? ""}
                 onChange={(e) => {
-                  const val = e.target.value
-                    ? Number(e.target.value)
-                    : undefined;
+                  const val = e.target.value ? Number(e.target.value) : undefined;
                   const newMin =
                     field.minValue !== undefined &&
                     val !== undefined &&
@@ -611,23 +607,17 @@ export default function ValidationBuilder({
             />
             Allow multiple selections
           </label>
-
           {field.multiple && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-              {/* Min selections */}
               <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-1">
-                  Min Selections
-                </label>
+                <label className="text-sm text-gray-600 mb-1">Min Selections</label>
                 <input
                   type="number"
                   min={0}
                   className="border p-2 rounded"
                   value={field.minValue ?? ""}
                   onChange={(e) => {
-                    const val = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
+                    const val = e.target.value ? Number(e.target.value) : undefined;
                     const newMax =
                       field.maxValue !== undefined &&
                       val !== undefined &&
@@ -638,20 +628,15 @@ export default function ValidationBuilder({
                   }}
                 />
               </div>
-              {/* Max selections */}
               <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-1">
-                  Max Selections
-                </label>
+                <label className="text-sm text-gray-600 mb-1">Max Selections</label>
                 <input
                   type="number"
                   min={0}
                   className="border p-2 rounded"
                   value={field.maxValue ?? ""}
                   onChange={(e) => {
-                    const val = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
+                    const val = e.target.value ? Number(e.target.value) : undefined;
                     const newMin =
                       field.minValue !== undefined &&
                       val !== undefined &&

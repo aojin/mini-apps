@@ -72,6 +72,8 @@ export default function MaskingBuilder({
       pattern,
       maxlength,
       placeholder,
+      // reset decimal places if not decimal
+      decimalPlaces: maskType === "decimal" ? field.decimalPlaces : undefined,
     });
   };
 
@@ -136,6 +138,33 @@ export default function MaskingBuilder({
             <option value="alphanumeric">Alphanumeric</option>
             <option value="slug">Slug (kebab-case)</option>
             <option value="custom">Custom (manual regex)</option>
+          </select>
+        </div>
+      )}
+
+      {/* Decimal precision selector */}
+      {field.maskType === "decimal" && (
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            Decimal Places Allowed
+          </label>
+          <select
+            className="border p-2 rounded w-full"
+            value={field.decimalPlaces ?? ""}
+            onChange={(e) =>
+              setField({
+                ...field,
+                decimalPlaces: e.target.value
+                  ? Number(e.target.value)
+                  : undefined,
+              })
+            }
+          >
+            <option value="">Any</option>
+            <option value="1">1 place</option>
+            <option value="2">2 places</option>
+            <option value="3">3 places</option>
+            <option value="4">4 places</option>
           </select>
         </div>
       )}

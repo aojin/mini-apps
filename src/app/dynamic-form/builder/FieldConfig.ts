@@ -6,6 +6,7 @@ export type FieldType =
   | "text"
   | "email"
   | "number"
+  | "currency"
   | "password"
   | "url"
   | "tel"
@@ -122,10 +123,9 @@ export interface FieldConfig {
   cols?: number;
 
   // ─── Header specific ───
-  // Single header type — size controlled via level
   level?: "h1" | "h2" | "h3" | "h4" | "h5";
 
   // ─── Spacer specific ───
-  // Can be sm/md/lg/xl or a numeric height
   spacerSize?: "sm" | "md" | "lg" | "xl" | number;
+  hideOnMobile?: boolean;   // 🔥 NEW: allows toggle to hide spacer in mobile preview
 }
