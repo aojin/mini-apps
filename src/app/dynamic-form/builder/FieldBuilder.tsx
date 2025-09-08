@@ -8,6 +8,9 @@ import MaskingBuilder from "./MaskingBuilder";
 import ValidationBuilder from "./ValidationBuilder";
 import OptionsBuilder from "./OptionsBuilder";
 
+// Extend FieldType so builder can start with an "empty" type
+type BuilderFieldType = FieldType | "";
+
 export default function FieldBuilder({
   fields,
   newField,
@@ -15,7 +18,7 @@ export default function FieldBuilder({
   addField,
   updateField,
   isEditing,
-  cancelEdit,   // ✅ new prop
+  cancelEdit,
 }: {
   fields: FieldConfig[];
   newField: FieldConfig;
@@ -23,15 +26,15 @@ export default function FieldBuilder({
   addField: () => void;
   updateField: () => void;
   isEditing: boolean;
-  cancelEdit: () => void;   // ✅ new prop type
+  cancelEdit: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
 
   // ─── Reset builder form ───
   const resetBuilderForm = () => {
-    setNewField({
+    const emptyField: FieldConfig = {
       id: 0,
-      type: "" as any,
+      type: "" as BuilderFieldType,
       label: "",
       name: "",
       ...LayoutConfig["text"],
@@ -40,14 +43,15 @@ export default function FieldBuilder({
       maxlength: undefined,
       placeholder: "",
       options: undefined,
-    });
+    };
+    setNewField(emptyField);
     setError(null);
   };
 
   // ─── Cancel Edit ───
   const handleCancelEdit = () => {
     resetBuilderForm();
-    cancelEdit(); // ✅ notify parent to exit edit mode
+    cancelEdit();
   };
 
   // ─── Validation ───
@@ -97,16 +101,16 @@ export default function FieldBuilder({
     else addField();
 
     resetBuilderForm();
-    if (isEditing) cancelEdit(); // ✅ after updating, exit edit mode
+    if (isEditing) cancelEdit();
   };
 
-  const handleTypeChange = (newType: FieldType | "") => {
+  const handleTypeChange = (newType: BuilderFieldType) => {
     if (!newType) {
       resetBuilderForm();
       return;
     }
 
-    const base: Partial<FieldConfig> = {
+    const base: FieldConfig = {
       ...newField,
       type: newType,
       ...LayoutConfig[newType],
@@ -132,7 +136,7 @@ export default function FieldBuilder({
         break;
     }
 
-    setNewField(base as FieldConfig);
+    setNewField(base);
   };
 
   const isSaveDisabled =
@@ -152,7 +156,7 @@ export default function FieldBuilder({
           <select
             className="border rounded w-full px-3 py-2 leading-normal"
             value={newField.type || ""}
-            onChange={(e) => handleTypeChange(e.target.value as FieldType)}
+            onChange={(e) => handleTypeChange(e.target.value as BuilderFieldType)}
           >
             <option value="">-- Select field type --</option>
             <option value="text">Text</option>
@@ -169,7 +173,6 @@ export default function FieldBuilder({
             <option value="radio-group">Radio Group</option>
             <option value="textarea">Textarea</option>
             <option value="select">Select</option>
-            {/* ❌ structural types intentionally excluded */}
           </select>
         </div>
 
