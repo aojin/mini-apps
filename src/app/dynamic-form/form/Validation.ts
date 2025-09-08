@@ -22,13 +22,13 @@ export function runValidators(
       field.maskType === "currency" ||
       field.maskType === "decimal"
     ) {
-      const num = parseFloat(val.replace(/[^0-9.]/g, ""));
+      const num = parseFloat(val.replace(/[^0-9.-]/g, ""));
       return isNaN(num) ? val.trim() : String(num);
     }
     return val.trim();
   };
 
-  // ─── Rule normalization (fix paradoxes) ───
+  // ─── Rule normalization (avoid paradoxes) ───
   if (field.minlength! < 0) field.minlength = 0;
   if (field.maxlength! < 0) field.maxlength = 0;
   if (field.exactLength! < 0) field.exactLength = 0;
@@ -159,7 +159,7 @@ export function runValidators(
   // Numbers / Currency
   // ──────────────────────────────────────────────
   if ((field.type === "number" || field.type === "currency" || field.maskType === "decimal") && value) {
-    const num = parseFloat(value.replace(/[^0-9.]/g, ""));
+    const num = parseFloat(value.replace(/[^0-9.-]/g, ""));
     if (isNaN(num)) return fail("Must be a valid number");
 
     if (field.minValue !== undefined && num < field.minValue)
@@ -167,23 +167,37 @@ export function runValidators(
     if (field.maxValue !== undefined && num > field.maxValue)
       return fail(`Maximum is ${field.maxValue}`);
 
-    if (field.step !== undefined && field.step !== "any") {
-      const step = Number(field.step);
-      if (!isNaN(step)) {
-        const remainder = (num - (field.minValue ?? 0)) % step;
-        if (Math.abs(remainder) > 1e-9 && Math.abs(remainder - step) > 1e-9)
-          return fail(`Must align with step ${step}`);
-      }
-    }
-
     if (field.noNegative && num < 0) return fail("No negative numbers allowed");
     if (field.positiveOnly && num <= 0) return fail("Must be a positive number");
     if (field.integerOnly && !Number.isInteger(num)) return fail("Must be an integer");
 
     if (field.decimalPlaces !== undefined) {
       const decimals = value.includes(".") ? value.split(".")[1].length : 0;
-      if (decimals !== field.decimalPlaces)
-        return fail(`Must have exactly ${field.decimalPlaces} decimal place${field.decimalPlaces !== 1 ? "s" : ""}`);
+      if (decimals > field.decimalPlaces)
+        return fail(`Maximum ${field.decimalPlaces} decimal places allowed`);
+    }
+
+    if (field.step !== undefined && field.step !== "any") {
+      const step = Number(field.step);
+      if (!isNaN(step) && step > 0) {
+        const offset = field.minValue ?? 0;
+        const remainder = (num - offset) % step;
+        const epsilon = 1e-9;
+        if (Math.abs(remainder) > epsilon && Math.abs(remainder - step) > epsilon)
+          return fail(`Must align with step of ${step}`);
+      }
+    }
+
+    if (field.allowedValues) {
+      const normalized = normalizeVal(String(num));
+      const allowed = field.allowedValues.map((v) => normalizeVal(v));
+      if (!allowed.includes(normalized))
+        return fail(`Allowed values: ${field.allowedValues.join(", ")}`);
+    }
+    if (field.disallowedValues) {
+      const normalized = normalizeVal(String(num));
+      const disallowed = field.disallowedValues.map((v) => normalizeVal(v));
+      if (disallowed.includes(normalized)) return fail(`Value ${num} is not allowed`);
     }
   }
 
