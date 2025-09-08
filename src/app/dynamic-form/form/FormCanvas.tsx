@@ -59,12 +59,13 @@ export default function FormCanvas(props: {
   let buffer: { field: FieldConfig; idx: number }[] = [];
 
   fields.forEach((field, idx) => {
-    // Only hide spacers if PREVIEW + mobile + flagged
+    // Hide spacer if flagged for mobile preview
     if (isPreview && previewMode === "sm" && field.type === "spacer" && field.hideOnMobile) {
       return;
     }
 
-    if (field.layout === "full" || field.type === "header" || field.type === "spacer") {
+    // Always full width for headers
+    if (field.type === "header" || field.layout === "full") {
       if (buffer.length > 0) {
         groups.push({
           leftFields: [buffer[0]],
@@ -80,6 +81,7 @@ export default function FormCanvas(props: {
       return;
     }
 
+    // Inputs and spacers can be half/full
     buffer.push({ field, idx });
     if (buffer.length === 2) {
       groups.push({
@@ -135,13 +137,7 @@ export default function FormCanvas(props: {
           <div className="flex flex-col gap-4">
             {groups.map((g, gi) => (
               <div key={gi} className="flex flex-col gap-2">
-                {g.leftFields.map(({ field, idx }) => (
-                  <FieldBlock
-                    key={field.id}
-                    {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
-                  />
-                ))}
-                {g.rightFields.map(({ field, idx }) => (
+                {[...g.leftFields, ...g.rightFields].map(({ field, idx }) => (
                   <FieldBlock
                     key={field.id}
                     {...{ ...props, field, globalIdx: idx, showBuilderControls: !isPreview }}
@@ -209,6 +205,7 @@ export default function FormCanvas(props: {
   );
 }
 
+// ─── Field Block ───
 function FieldBlock({
   field,
   fields,
@@ -281,21 +278,65 @@ function FieldBlock({
           )}
 
           {field.type === "spacer" && (
-            <select
-              value={field.spacerSize || "md"}
-              onChange={(e) =>
-                updateFieldConfig({
-                  ...field,
-                  spacerSize: e.target.value as "sm" | "md" | "lg" | "xl",
-                })
-              }
-              className="border px-2 py-1 rounded"
-            >
-              <option value="sm">Small</option>
-              <option value="md">Medium</option>
-              <option value="lg">Large</option>
-              <option value="xl">XL</option>
-            </select>
+            <>
+              {/* Spacer size */}
+              <select
+                value={field.spacerSize || "md"}
+                onChange={(e) =>
+                  updateFieldConfig({
+                    ...field,
+                    spacerSize: e.target.value as "sm" | "md" | "lg" | "xl",
+                  })
+                }
+                className="border px-2 py-1 rounded"
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="xl">XL</option>
+              </select>
+
+              {/* Spacer layout toggle */}
+              <select
+                value={field.layout || "full"}
+                onChange={(e) =>
+                  updateFieldConfig({
+                    ...field,
+                    layout: e.target.value as "full" | "half",
+                  })
+                }
+                className="border px-2 py-1 rounded"
+              >
+                <option value="full">Full Width</option>
+                <option value="half">Half Width</option>
+              </select>
+
+              {/* Hide on mobile toggle */}
+              <button
+                type="button"
+                onClick={() =>
+                  updateFieldConfig({
+                    ...field,
+                    hideOnMobile: !field.hideOnMobile,
+                  })
+                }
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${
+                  field.hideOnMobile
+                    ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
+                    : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                {field.hideOnMobile ? (
+                  <>
+                    <span>🙈</span> Hidden on Mobile
+                  </>
+                ) : (
+                  <>
+                    <span>👁️</span> Visible on Mobile
+                  </>
+                )}
+              </button>
+            </>
           )}
         </div>
       )}
@@ -345,34 +386,6 @@ function FieldBlock({
               title="Edit"
             >
               ✎
-            </button>
-          )}
-
-          {/* 🔥 Moved toggle here, inline with other buttons */}
-          {field.type === "spacer" && (
-            <button
-              type="button"
-              onClick={() =>
-                updateFieldConfig({
-                  ...field,
-                  hideOnMobile: !field.hideOnMobile,
-                })
-              }
-              className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${
-                field.hideOnMobile
-                  ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
-                  : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-              }`}
-            >
-              {field.hideOnMobile ? (
-                <>
-                  <span>🙈</span> Hidden on Mobile
-                </>
-              ) : (
-                <>
-                  <span>👁️</span> Visible on Mobile
-                </>
-              )}
             </button>
           )}
         </div>
