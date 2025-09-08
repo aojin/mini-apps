@@ -101,6 +101,9 @@ export default function FieldRenderer({
   const [localError, setLocalError] = useState<string | null>(error || null);
   const [displayValue, setDisplayValue] = useState(value || "");
 
+  const inputId = `${field.name}-${field.id}`;
+  const errorId = `${inputId}-error`;
+
   useEffect(() => {
     setLocalError(error || null);
   }, [error]);
@@ -177,27 +180,33 @@ export default function FieldRenderer({
         ? "h-20 my-6"
         : "h-6 my-2";
     const widthClass = field.layout === "half" ? "w-1/2" : "w-full";
-    return <div className={`${widthClass} ${sizeClass}`} />;
+    return <div className={`${widthClass} ${sizeClass}`} aria-hidden="true" />;
   }
 
   // ─── Inputs ───
   return (
     <div className="flex flex-col items-start w-full">
       {field.label && !["note"].includes(field.type) && (
-        <label className="block font-medium text-sm mb-2">{field.label}</label>
+        <label htmlFor={inputId} className="block font-medium text-sm mb-2">
+          {field.label}
+        </label>
       )}
 
       {field.type === "currency" ? (
         <input
+          id={inputId}
           type="text"
           name={field.name}
           value={displayValue}
           onChange={(e) => handleChange(e.target.value)}
           className={baseInputClass}
           placeholder={field.placeholder || "$0.00"}
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
         />
       ) : field.type === "textarea" ? (
         <textarea
+          id={inputId}
           name={field.name}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -206,9 +215,12 @@ export default function FieldRenderer({
           cols={field.cols}
           placeholder={field.placeholder}
           maxLength={field.maxlength}
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
         />
       ) : field.type === "select" && field.options ? (
         <select
+          id={inputId}
           name={field.name}
           value={field.multiple ? value.split(",").filter(Boolean) : value}
           onChange={(e) => {
@@ -222,12 +234,12 @@ export default function FieldRenderer({
           className={`${baseInputClass} ${field.multiple ? "min-h-[6rem]" : ""}`}
           multiple={field.multiple}
           size={field.multiple ? Math.min(field.options.length, 4) : undefined}
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
         >
-          {/* Placeholder if no default and not required */}
-          {!field.multiple &&
-            !field.options.some((o) => o.default) && (
-              <option value="">-- Select --</option>
-            )}
+          {!field.multiple && !field.options.some((o) => o.default) && (
+            <option value="">-- Select --</option>
+          )}
           {field.options.map((opt, idx) => (
             <option key={idx} value={opt.value}>
               {opt.label}
@@ -235,7 +247,13 @@ export default function FieldRenderer({
           ))}
         </select>
       ) : field.type === "radio-group" && field.options ? (
-        <div className="flex flex-col gap-2">
+        <fieldset
+          id={inputId}
+          className="flex flex-col gap-2"
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
+        >
+          <legend className="block font-medium text-sm mb-2">{field.label}</legend>
           {field.options.map((opt, idx) => (
             <label key={idx} className="inline-flex items-center gap-2">
               <input
@@ -248,9 +266,15 @@ export default function FieldRenderer({
               {opt.label}
             </label>
           ))}
-        </div>
+        </fieldset>
       ) : field.type === "checkbox" && field.options ? (
-        <div className="flex flex-col gap-2">
+        <fieldset
+          id={inputId}
+          className="flex flex-col gap-2"
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
+        >
+          <legend className="block font-medium text-sm mb-2">{field.label}</legend>
           {field.options.map((opt, idx) => {
             const selected = value ? value.split(",") : [];
             return (
@@ -271,13 +295,12 @@ export default function FieldRenderer({
               </label>
             );
           })}
-        </div>
+        </fieldset>
       ) : field.type === "file" ? (
         <div className="w-full">
           <label
-            htmlFor={field.name}
-            className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-dashed rounded-lg cursor-pointer 
-                     hover:bg-gray-50 border-gray-300"
+            htmlFor={inputId}
+            className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 border-gray-300"
           >
             <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
               <svg
@@ -302,12 +325,14 @@ export default function FieldRenderer({
               )}
             </div>
             <input
-              id={field.name}
+              id={inputId}
               name={field.name}
               type="file"
               multiple={field.multiple}
               accept={field.accept}
               className="hidden"
+              aria-invalid={!!localError}
+              aria-describedby={localError ? errorId : undefined}
               onChange={(e) => {
                 const files = e.target.files ? Array.from(e.target.files) : [];
                 const serialized = files.map((f) => ({
@@ -322,7 +347,6 @@ export default function FieldRenderer({
             />
           </label>
 
-          {/* Selected file list with delete buttons */}
           {value && (() => {
             let files: { name: string; sizeMB: number }[] = [];
             try {
@@ -364,6 +388,7 @@ export default function FieldRenderer({
         </div>
       ) : (
         <input
+          id={inputId}
           type={field.maskType === "decimal" ? "text" : field.type}
           name={field.name}
           value={
@@ -394,10 +419,20 @@ export default function FieldRenderer({
           pattern={field.pattern}
           multiple={field.multiple}
           accept={field.accept}
+          aria-invalid={!!localError}
+          aria-describedby={localError ? errorId : undefined}
         />
       )}
 
-      {localError && <span className="text-sm text-red-600 mt-1">{localError}</span>}
+      {localError && (
+        <span
+          id={errorId}
+          className="text-sm text-red-600 mt-1"
+          role="alert"
+        >
+          {localError}
+        </span>
+      )}
     </div>
   );
 }
