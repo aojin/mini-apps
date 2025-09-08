@@ -186,12 +186,16 @@ export default function FieldRenderer({
   // ─── Inputs ───
   return (
     <div className="flex flex-col items-start w-full">
-      {field.label && !["note"].includes(field.type) && (
-        <label htmlFor={inputId} className="block font-medium text-sm mb-2">
-          {field.label}
-        </label>
-      )}
+      {/* Render <label> for standard fields */}
+      {field.label &&
+        !["note", "checkbox", "radio-group"].includes(field.type) && (
+          <label htmlFor={inputId} className="block font-medium text-sm mb-2">
+            {field.label}
+            {field.required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+        )}
 
+      {/* Currency */}
       {field.type === "currency" ? (
         <input
           id={inputId}
@@ -203,6 +207,7 @@ export default function FieldRenderer({
           placeholder={field.placeholder || "$0.00"}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         />
       ) : field.type === "textarea" ? (
         <textarea
@@ -217,6 +222,7 @@ export default function FieldRenderer({
           maxLength={field.maxlength}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         />
       ) : field.type === "select" && field.options ? (
         <select
@@ -236,6 +242,7 @@ export default function FieldRenderer({
           size={field.multiple ? Math.min(field.options.length, 4) : undefined}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         >
           {!field.multiple && !field.options.some((o) => o.default) && (
             <option value="">-- Select --</option>
@@ -249,11 +256,19 @@ export default function FieldRenderer({
       ) : field.type === "radio-group" && field.options ? (
         <fieldset
           id={inputId}
-          className="flex flex-col gap-2"
+          className={`flex ${
+            field.orientation === "horizontal"
+              ? "flex-row flex-wrap gap-4"
+              : "flex-col gap-2"
+          }`}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         >
-          <legend className="block font-medium text-sm mb-2">{field.label}</legend>
+          <legend className="block font-medium text-sm mb-2">
+            {field.label}
+            {field.required && <span className="text-red-500 ml-1">*</span>}
+          </legend>
           {field.options.map((opt, idx) => (
             <label key={idx} className="inline-flex items-center gap-2">
               <input
@@ -270,11 +285,19 @@ export default function FieldRenderer({
       ) : field.type === "checkbox" && field.options ? (
         <fieldset
           id={inputId}
-          className="flex flex-col gap-2"
+          className={`flex ${
+            field.orientation === "horizontal"
+              ? "flex-row flex-wrap gap-4"
+              : "flex-col gap-2"
+          }`}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         >
-          <legend className="block font-medium text-sm mb-2">{field.label}</legend>
+          <legend className="block font-medium text-sm mb-2">
+            {field.label}
+            {field.required && <span className="text-red-500 ml-1">*</span>}
+          </legend>
           {field.options.map((opt, idx) => {
             const selected = value ? value.split(",") : [];
             return (
@@ -333,6 +356,7 @@ export default function FieldRenderer({
               className="hidden"
               aria-invalid={!!localError}
               aria-describedby={localError ? errorId : undefined}
+              aria-required={field.required || undefined}
               onChange={(e) => {
                 const files = e.target.files ? Array.from(e.target.files) : [];
                 const serialized = files.map((f) => ({
@@ -347,44 +371,46 @@ export default function FieldRenderer({
             />
           </label>
 
-          {value && (() => {
-            let files: { name: string; sizeMB: number }[] = [];
-            try {
-              files = JSON.parse(value);
-            } catch {
-              if (value.trim()) {
-                files = [{ name: value.trim(), sizeMB: 0 }];
+          {value &&
+            (() => {
+              let files: { name: string; sizeMB: number }[] = [];
+              try {
+                files = JSON.parse(value);
+              } catch {
+                if (value.trim()) {
+                  files = [{ name: value.trim(), sizeMB: 0 }];
+                }
               }
-            }
-            return files.length ? (
-              <ul className="mt-3 space-y-1 w-full text-sm text-gray-700">
-                {files.map((f, idx) => (
-                  <li
-                    key={idx}
-                    className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded px-2 py-1"
-                  >
-                    <span className="truncate">{f.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{f.sizeMB} MB</span>
-                      <button
-                        type="button"
-                        className="text-red-500 hover:text-red-700 text-xs"
-                        onClick={() => {
-                          const updated = files.filter((_, i) => i !== idx);
-                          const newVal = JSON.stringify(updated);
-                          const validationError = runValidators(newVal, field, context, allFields);
-                          setLocalError(validationError);
-                          onChange(newVal, validationError);
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null;
-          })()}
+              return files.length ? (
+                <ul className="mt-3 space-y-1 w-full text-sm text-gray-700">
+                  {files.map((f, idx) => (
+                    <li
+                      key={idx}
+                      className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded px-2 py-1"
+                    >
+                      <span className="truncate">{f.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{f.sizeMB} MB</span>
+                        <button
+                          type="button"
+                          className="text-red-500 hover:text-red-700 text-xs"
+                          aria-label={`Remove ${f.name}`}
+                          onClick={() => {
+                            const updated = files.filter((_, i) => i !== idx);
+                            const newVal = JSON.stringify(updated);
+                            const validationError = runValidators(newVal, field, context, allFields);
+                            setLocalError(validationError);
+                            onChange(newVal, validationError);
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null;
+            })()}
         </div>
       ) : (
         <input
@@ -421,15 +447,12 @@ export default function FieldRenderer({
           accept={field.accept}
           aria-invalid={!!localError}
           aria-describedby={localError ? errorId : undefined}
+          aria-required={field.required || undefined}
         />
       )}
 
       {localError && (
-        <span
-          id={errorId}
-          className="text-sm text-red-600 mt-1"
-          role="alert"
-        >
+        <span id={errorId} className="text-sm text-red-600 mt-1" role="alert">
           {localError}
         </span>
       )}
