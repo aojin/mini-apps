@@ -223,7 +223,11 @@ export default function FieldRenderer({
           multiple={field.multiple}
           size={field.multiple ? Math.min(field.options.length, 4) : undefined}
         >
-          {!field.multiple && !field.required && <option value="">-- Select --</option>}
+          {/* Placeholder if no default and not required */}
+          {!field.multiple &&
+            !field.options.some((o) => o.default) && (
+              <option value="">-- Select --</option>
+            )}
           {field.options.map((opt, idx) => (
             <option key={idx} value={opt.value}>
               {opt.label}

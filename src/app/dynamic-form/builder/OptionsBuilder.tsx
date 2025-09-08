@@ -18,26 +18,29 @@ export default function OptionsBuilder({
     val: string | boolean
   ) => {
     const updated = [...(field.options || [])];
-    updated[idx] = { ...updated[idx], [key]: val };
+    updated[idx] = { ...updated[idx], [key]: val as any };
+    setField({ ...field, options: updated });
+  };
 
-    // enforce single default for radio/select
-    if (
-      key === "default" &&
-      val === true &&
-      ["radio-group", "select"].includes(field.type)
-    ) {
-      updated.forEach((o, i) => {
-        if (i !== idx) o.default = false;
-      });
+  const toggleDefault = (idx: number, checked: boolean) => {
+    const updated = [...(field.options || [])];
+    if (checked) {
+      // Only one default at a time
+      updated.forEach((o, i) => (o.default = i === idx));
+    } else {
+      // Allow none selected (for select only)
+      updated[idx].default = false;
     }
-
     setField({ ...field, options: updated });
   };
 
   const addOption = () => {
     setField({
       ...field,
-      options: [...(field.options || []), { label: "", value: "" }],
+      options: [
+        ...(field.options || []),
+        { label: "", value: "" }, // required but starts blank
+      ],
     });
   };
 
@@ -47,6 +50,9 @@ export default function OptionsBuilder({
       options: (field.options || []).filter((_, i) => i !== idx),
     });
   };
+
+  const hasEmptyOptions =
+    (field.options || []).some((o) => !o.label.trim() || !o.value.trim());
 
   return (
     <div className="bg-purple-50 p-6 rounded-xl space-y-4 border border-purple-200 w-full">
@@ -87,59 +93,92 @@ export default function OptionsBuilder({
 
       {/* ─── Option list ─── */}
       <div className="space-y-3">
-        {(field.options || []).map((opt, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="text"
-              className="border p-2 rounded flex-1"
-              placeholder="Label"
-              value={opt.label}
-              onChange={(e) => updateOption(i, "label", e.target.value)}
-            />
-            <input
-              type="text"
-              className="border p-2 rounded flex-1"
-              placeholder="Value"
-              value={opt.value}
-              onChange={(e) => updateOption(i, "value", e.target.value)}
-            />
+        {(field.options || []).map((opt, i) => {
+          const labelError = !opt.label.trim();
+          const valueError = !opt.value.trim();
 
-            {/* Checkbox = can have multiple checked */}
-            {field.type === "checkbox" && (
-              <label className="flex items-center gap-1">
+          return (
+            <div key={i} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
                 <input
-                  type="checkbox"
-                  checked={opt.checked || false}
-                  onChange={(e) =>
-                    updateOption(i, "checked", e.target.checked)
-                  }
+                  type="text"
+                  className={`border p-2 rounded flex-1 ${
+                    labelError ? "border-red-500" : ""
+                  }`}
+                  placeholder="Label (required)"
+                  value={opt.label}
+                  onChange={(e) => updateOption(i, "label", e.target.value)}
                 />
-                Checked
-              </label>
-            )}
-
-            {/* Radio/Select = only one default */}
-            {["radio-group", "select"].includes(field.type) && (
-              <label className="flex items-center gap-1">
                 <input
-                  type="radio"
-                  name={`default-${field.id}`}
-                  checked={opt.default || false}
-                  onChange={() => updateOption(i, "default", true)}
+                  type="text"
+                  className={`border p-2 rounded flex-1 ${
+                    valueError ? "border-red-500" : ""
+                  }`}
+                  placeholder="Value (required)"
+                  value={opt.value}
+                  onChange={(e) => updateOption(i, "value", e.target.value)}
                 />
-                Default
-              </label>
-            )}
 
-            <button
-              type="button"
-              className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-              onClick={() => removeOption(i)}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
+                {/* Checkbox = multiple allowed */}
+                {field.type === "checkbox" && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={opt.checked || false}
+                      onChange={(e) =>
+                        updateOption(i, "checked", e.target.checked)
+                      }
+                    />
+                    Checked
+                  </label>
+                )}
+
+                {/* Radio-group = always single default */}
+                {field.type === "radio-group" && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name={`default-${field.id}`}
+                      checked={opt.default || false}
+                      onChange={() => toggleDefault(i, true)}
+                    />
+                    Default
+                  </label>
+                )}
+
+                {/* Select = toggleable default */}
+                {field.type === "select" && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={opt.default || false}
+                      onChange={(e) => toggleDefault(i, e.target.checked)}
+                    />
+                    Default
+                  </label>
+                )}
+
+                <button
+                  type="button"
+                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  onClick={() => removeOption(i)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {(labelError || valueError) && (
+                <p className="text-xs text-red-600 ml-1">
+                  {labelError && valueError
+                    ? "Label and value are required."
+                    : labelError
+                    ? "Label is required."
+                    : "Value is required."}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <button
@@ -149,6 +188,13 @@ export default function OptionsBuilder({
       >
         Add Option
       </button>
+
+      {/* Error banner if any blank options exist */}
+      {hasEmptyOptions && (
+        <p className="text-red-600 text-sm font-medium border border-red-300 bg-red-50 px-3 py-2 rounded mt-2">
+          All options must have both label and value filled in.
+        </p>
+      )}
     </div>
   );
 }
