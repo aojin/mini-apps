@@ -8,6 +8,7 @@ import MaskingBuilder from "./MaskingBuilder";
 import ValidationBuilder from "./ValidationBuilder";
 import OptionsBuilder from "./OptionsBuilder";
 
+
 // ─── Builder-specific config ───
 export interface BuilderFieldConfig extends Omit<FieldConfig, "type"> {
   type: FieldType | ""; // allow empty during building
@@ -252,7 +253,7 @@ export default function FieldBuilder({
       )}
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-6">
         <button
           type="button"
           onClick={handleSave}
