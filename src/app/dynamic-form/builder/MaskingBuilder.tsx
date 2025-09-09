@@ -1,8 +1,10 @@
+// app/dynamic-form/form/MaskingBuilder.tsx
 "use client";
 
 import React, { useEffect } from "react";
 import { MaskType } from "./FieldConfig";
-import { BuilderFieldConfig } from "./FieldBuilder"; // ✅ import the builder type
+import { BuilderFieldConfig } from "./FieldBuilder";
+import Collapsible from "../components/Collapsible";
 
 export default function MaskingBuilder({
   field,
@@ -77,7 +79,7 @@ export default function MaskingBuilder({
     });
   };
 
-  // 🔹 Auto-apply regex rules for tel, email, url
+  // Auto-apply regex rules for tel, email, url
   useEffect(() => {
     if (field.type === "tel" && field.maskType !== "tel") {
       setField({
@@ -106,7 +108,8 @@ export default function MaskingBuilder({
         placeholder: "https://example.com",
       });
     }
-  }, [field.type, field.maskType]); // ✅ only rerun if type or maskType changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field.type, field.maskType]);
 
   const isPresetSelected = !!field.maskType && field.maskType !== "custom";
   const supportsMasking = ["text", "tel", "email", "url", "textarea"].includes(
@@ -116,117 +119,117 @@ export default function MaskingBuilder({
   if (!supportsMasking) return null;
 
   return (
-    <div className="bg-blue-50 p-6 rounded-xl space-y-6 border border-blue-200 w-full">
-      <h3 className="font-semibold text-lg text-blue-700">Input Masking</h3>
+    <Collapsible title="Input Masking" defaultOpen={false}>
+      <div className="space-y-6 w-full">
+        {/* Preset masks (for text fields) */}
+        {field.type === "text" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Preset Mask
+            </label>
+            <select
+              className="border p-2 rounded w-full"
+              value={field.maskType ?? ""}
+              onChange={(e) => handleMaskChange(e.target.value as MaskType)}
+            >
+              <option value="">None</option>
+              <option value="creditCard">Credit Card</option>
+              <option value="ssn">SSN</option>
+              <option value="zip">ZIP Code</option>
+              <option value="usPostal">US Postal</option>
+              <option value="currency">Currency</option>
+              <option value="decimal">Decimal Number</option>
+              <option value="time">Time (HH:mm)</option>
+              <option value="alphanumeric">Alphanumeric</option>
+              <option value="slug">Slug (kebab-case)</option>
+              <option value="custom">Custom (manual regex)</option>
+            </select>
+          </div>
+        )}
 
-      {/* Preset masks (for text fields) */}
-      {field.type === "text" && (
+        {/* Decimal precision selector */}
+        {field.maskType === "decimal" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Decimal Places Allowed
+            </label>
+            <select
+              className="border p-2 rounded w-full"
+              value={field.decimalPlaces ?? ""}
+              onChange={(e) =>
+                setField({
+                  ...field,
+                  decimalPlaces: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                })
+              }
+            >
+              <option value="">Any</option>
+              <option value="1">1 place</option>
+              <option value="2">2 places</option>
+              <option value="3">3 places</option>
+              <option value="4">4 places</option>
+            </select>
+          </div>
+        )}
+
+        {/* Custom regex input */}
+        {field.maskType === "custom" && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custom Regex Pattern
+            </label>
+            <input
+              type="text"
+              className="border p-2 rounded w-full"
+              placeholder="Enter regex (e.g. ^[A-Z]{3}\\d{2}$)"
+              value={field.pattern ?? ""}
+              onChange={(e) => setField({ ...field, pattern: e.target.value })}
+            />
+          </div>
+        )}
+
+        {/* Placeholder */}
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Preset Mask
-          </label>
-          <select
-            className="border p-2 rounded w-full"
-            value={field.maskType ?? ""}
-            onChange={(e) => handleMaskChange(e.target.value as MaskType)}
-          >
-            <option value="">None</option>
-            <option value="creditCard">Credit Card</option>
-            <option value="ssn">SSN</option>
-            <option value="zip">ZIP Code</option>
-            <option value="usPostal">US Postal</option>
-            <option value="currency">Currency</option>
-            <option value="decimal">Decimal Number</option>
-            <option value="time">Time (HH:mm)</option>
-            <option value="alphanumeric">Alphanumeric</option>
-            <option value="slug">Slug (kebab-case)</option>
-            <option value="custom">Custom (manual regex)</option>
-          </select>
-        </div>
-      )}
-
-      {/* Decimal precision selector */}
-      {field.maskType === "decimal" && (
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Decimal Places Allowed
-          </label>
-          <select
-            className="border p-2 rounded w-full"
-            value={field.decimalPlaces ?? ""}
-            onChange={(e) =>
-              setField({
-                ...field,
-                decimalPlaces: e.target.value
-                  ? Number(e.target.value)
-                  : undefined,
-              })
-            }
-          >
-            <option value="">Any</option>
-            <option value="1">1 place</option>
-            <option value="2">2 places</option>
-            <option value="3">3 places</option>
-            <option value="4">4 places</option>
-          </select>
-        </div>
-      )}
-
-      {/* Custom regex input */}
-      {field.maskType === "custom" && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Custom Regex Pattern
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Placeholder
           </label>
           <input
             type="text"
             className="border p-2 rounded w-full"
-            placeholder="Enter regex (e.g. ^[A-Z]{3}\\d{2}$)"
-            value={field.pattern ?? ""}
-            onChange={(e) => setField({ ...field, pattern: e.target.value })}
+            placeholder="Enter custom placeholder text"
+            value={field.placeholder ?? ""}
+            onChange={(e) => setField({ ...field, placeholder: e.target.value })}
           />
         </div>
-      )}
 
-      {/* Placeholder */}
-      <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
-          Placeholder
-        </label>
-        <input
-          type="text"
-          className="border p-2 rounded w-full"
-          placeholder="Enter custom placeholder text"
-          value={field.placeholder ?? ""}
-          onChange={(e) => setField({ ...field, placeholder: e.target.value })}
-        />
+        {/* Character restriction checkboxes */}
+        {!isPresetSelected && field.maskType !== "custom" && (
+          <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={field.alphaOnly || false}
+                onChange={(e) =>
+                  setField({ ...field, alphaOnly: e.target.checked })
+                }
+              />
+              Alpha only (A–Z)
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={field.noWhitespace || false}
+                onChange={(e) =>
+                  setField({ ...field, noWhitespace: e.target.checked })
+                }
+              />
+              No whitespace (single word)
+            </label>
+          </div>
+        )}
       </div>
-
-      {/* Character restriction checkboxes */}
-      {!isPresetSelected && field.maskType !== "custom" && (
-        <div className="flex flex-wrap gap-4 text-sm text-blue-700">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={field.alphaOnly || false}
-              onChange={(e) =>
-                setField({ ...field, alphaOnly: e.target.checked })
-              }
-            />
-            Alpha only (A–Z)
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={field.noWhitespace || false}
-              onChange={(e) =>
-                setField({ ...field, noWhitespace: e.target.checked })
-              }
-            />
-            No whitespace (single word)
-          </label>
-        </div>
-      )}
-    </div>
+    </Collapsible>
   );
 }
