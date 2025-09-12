@@ -67,6 +67,15 @@ export default function Home() {
           >
             Orbital Visualizer
           </a>
+          <a
+            href="https://fun-runs.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setLoading(true)}
+            className="h-16 flex items-center justify-center rounded bg-indigo-600 text-white font-medium hover:bg-pink-700 transition"
+          >
+            Strava Fun Runs
+          </a>
           <Link
             href="/news"
             onClick={() => setLoading(true)}
