@@ -31,6 +31,7 @@ export default function QuizDetailPage() {
     }
   }, [id]);
 
+  // Open Trivia sends questions and answers sometimes with baked in HTML entities like &quot;
   function decodeHtml(html: string) {
     const txt = document.createElement("textarea");
     txt.innerHTML = html;

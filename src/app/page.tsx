@@ -52,6 +52,22 @@ export default function Home() {
             Quiz App
           </Link>
           <Link
+            href="/dynamic-form"
+            onClick={() => setLoading(true)}
+            className="h-16 flex items-center justify-center rounded bg-gray-600 text-white font-medium hover:bg-gray-700 transition"
+          >
+            Dynamic Form Builder
+          </Link>
+          <a
+            href="https://orbital-visualizer-131818e262d8.herokuapp.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setLoading(true)}
+            className="h-16 flex items-center justify-center rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
+          >
+            Orbital Visualizer
+          </a>
+          <Link
             href="/news"
             onClick={() => setLoading(true)}
             className="h-16 flex items-center justify-center rounded bg-yellow-600 text-white font-medium hover:bg-yellow-700 transition"

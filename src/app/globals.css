@@ -24,3 +24,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* ✅ Label normalization */
+form label {
+  min-height: 1.5rem; /* matches h-6 */
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem; /* Tailwind text-sm */
+  line-height: 1;      /* equivalent to leading-none */
+}
+
+/* ✅ Inputs & textareas: keep rounded look */
+form input,
+form textarea {
+  line-height: 1.25rem;   /* leading-normal */
+  height: 2.625rem;       /* 42px */
+  border-width: 1px;
+  border-color: #d1d5db;  /* gray-300 */
+  border-radius: 0.375rem; /* rounded-md */
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+/* ✅ Selects: always square, prevents dropdown clipping */
+form select {
+  line-height: 1.25rem;
+  height: 2.625rem;       /* 42px */
+  border-width: 1px;
+  border-color: #d1d5db;
+  border-radius: 0;       /* 👈 force square edges */
+  padding: 0.5rem;
+  box-sizing: border-box;
+  background-color: #fff; /* ensure white base */
+}
+
+/* ✅ Textarea: taller by default */
+form textarea {
+  min-height: 5rem;
+}

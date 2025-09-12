@@ -1,10 +1,17 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
+// ——— Types ———
 interface Article {
   title: string;
   link: string;
   source_id: string;
+}
+
+interface GroupedArticle {
+  title: string;
+  link: string;
+  sources: string[]; // all source_ids for this article
 }
 
 interface NewsFeedProps {
@@ -12,8 +19,34 @@ interface NewsFeedProps {
   initialArticles: Article[];
 }
 
-export default function NewsFeed({ initialNextPage, initialArticles }: NewsFeedProps) {
-  const [articles, setArticles] = useState<Article[]>(initialArticles || []);
+// ——— Utility: group duplicates by normalized title ———
+function groupArticles(articles: Article[]): GroupedArticle[] {
+  const groups = new Map<string, GroupedArticle>();
+
+  for (const article of articles) {
+    const normalized = article.title.toLowerCase().replace(/[^\w\s]/g, "");
+    if (!groups.has(normalized)) {
+      groups.set(normalized, {
+        title: article.title,
+        link: article.link,
+        sources: [article.source_id],
+      });
+    } else {
+      groups.get(normalized)!.sources.push(article.source_id);
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
+// ——— Component ———
+export default function NewsFeed({
+  initialNextPage,
+  initialArticles,
+}: NewsFeedProps) {
+  const [articles, setArticles] = useState<GroupedArticle[]>(
+    groupArticles(initialArticles || [])
+  );
   const [nextPage, setNextPage] = useState<string | null>(initialNextPage);
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(false);
@@ -22,49 +55,70 @@ export default function NewsFeed({ initialNextPage, initialArticles }: NewsFeedP
   const retryRef = useRef<NodeJS.Timeout | null>(null);
   const retryDelayRef = useRef(3000); // backoff starts at 3s
 
-  const fetchPage = useCallback(async (pageToken: string, isRetry = false) => {
-    if (loading && !isRetry) return;
-    if (!pageToken) return;
+  // ——— Fetch + deduplicate ———
+  const fetchPage = useCallback(
+    async (pageToken: string, isRetry = false) => {
+      if (loading && !isRetry) return;
+      if (!pageToken) return;
 
-    setLoading(true);
-    setCooldown(false);
-
-    try {
-      const url = `https://newsdata.io/api/1/news?apikey=${
-        process.env.NEXT_PUBLIC_NEWSDATA_KEY
-      }&country=us&language=en&category=top&page=${pageToken}`;
-
-      const res = await fetch(url);
-
-      if (res.status === 429) {
-        console.warn(`Rate limit hit. Retrying in ${retryDelayRef.current / 1000}s`);
-        setCooldown(true);
-
-        retryRef.current = setTimeout(() => {
-          fetchPage(pageToken, true); // force retry, ignore loading/cooldown guards
-          retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30000); // exponential
-        }, retryDelayRef.current);
-
-        return;
-      }
-
-      retryDelayRef.current = 3000; // reset on success
-
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      const data = await res.json();
-
-      if (data.results) {
-        setArticles((prev) => [...prev, ...data.results]);
-      }
-      setNextPage(data.nextPage || null);
-    } catch (err) {
-      console.error("Pagination error:", err);
-    } finally {
-      setLoading(false);
+      setLoading(true);
       setCooldown(false);
-    }
-  }, [loading]);
 
+      try {
+        const url = `https://newsdata.io/api/1/news?apikey=${
+          process.env.NEXT_PUBLIC_NEWSDATA_KEY
+        }&country=us&language=en&category=top&page=${pageToken}`;
+
+        const res = await fetch(url);
+
+        // Handle rate limiting
+        if (res.status === 429) {
+          console.warn(
+            `Rate limit hit. Retrying in ${retryDelayRef.current / 1000}s`
+          );
+          setCooldown(true);
+
+          retryRef.current = setTimeout(() => {
+            fetchPage(pageToken, true); // force retry
+            retryDelayRef.current = Math.min(
+              retryDelayRef.current * 2,
+              30000
+            ); // exponential backoff
+          }, retryDelayRef.current);
+
+          return;
+        }
+
+        retryDelayRef.current = 3000; // reset delay on success
+
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
+        const data = await res.json();
+
+        if (data.results) {
+          setArticles((prev) =>
+            groupArticles([
+              ...prev.map((a) => ({
+                title: a.title,
+                link: a.link,
+                source_id: a.sources[0],
+              })), // flatten back for regrouping
+              ...data.results,
+            ])
+          );
+        }
+
+        setNextPage(data.nextPage || null);
+      } catch (err) {
+        console.error("Pagination error:", err);
+      } finally {
+        setLoading(false);
+        setCooldown(false);
+      }
+    },
+    [loading]
+  );
+
+  // ——— Infinite scroll observer ———
   useEffect(() => {
     if (!observerRef.current || !nextPage) return;
 
@@ -86,10 +140,14 @@ export default function NewsFeed({ initialNextPage, initialArticles }: NewsFeedP
     };
   }, [nextPage, fetchPage, loading, cooldown]);
 
+  // ——— Render ———
   return (
     <div className="w-full space-y-4">
       {articles.map((a, idx) => (
-        <div key={idx} className="p-4 bg-white rounded shadow hover:shadow-md transition">
+        <div
+          key={idx}
+          className="p-4 bg-white rounded shadow hover:shadow-md transition"
+        >
           <a
             href={a.link}
             target="_blank"
@@ -98,7 +156,13 @@ export default function NewsFeed({ initialNextPage, initialArticles }: NewsFeedP
           >
             {a.title}
           </a>
-          <p className="text-gray-600 text-sm mt-1">{a.source_id}</p>
+          <p className="text-gray-600 text-sm mt-1">
+            {a.sources.length > 1
+              ? `Seen in ${a.sources.length} sources (${a.sources
+                  .slice(0, 3)
+                  .join(", ")}${a.sources.length > 3 ? "…" : ""})`
+              : `Source: ${a.sources[0]}`}
+          </p>
         </div>
       ))}
 
