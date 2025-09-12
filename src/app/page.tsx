@@ -62,7 +62,6 @@ export default function Home() {
             href="https://orbital-visualizer-131818e262d8.herokuapp.com/"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setLoading(true)}
             className="h-16 flex items-center justify-center rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
           >
             Orbital Visualizer
@@ -71,7 +70,6 @@ export default function Home() {
             href="https://fun-runs.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setLoading(true)}
             className="h-16 flex items-center justify-center rounded bg-pink-600 text-white font-medium hover:bg-pink-700 transition"
           >
             Strava Fun Runs
