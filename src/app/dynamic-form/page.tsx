@@ -10,6 +10,7 @@ import FieldBuilder from "./builder/FieldBuilder";
 import FormCanvas from "./form/FormCanvas";
 import { LayoutConfig } from "./layout/LayoutConfig";
 import { computeDefaultValue } from "./form/utils";
+import Link from "next/link";
 
 export default function Page() {
   return (
@@ -297,6 +298,14 @@ function DynamicFormBuilder() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 overflow-visible">
+      <div className="self-start mb-4">
+        <Link
+          href="/"
+          className="text-blue-600 hover:underline text-sm"
+        >
+          ← Back to Mini Apps
+        </Link>
+      </div>
       <h1 className="text-3xl font-bold text-center mb-6">
         Dynamic Form Builder
       </h1>
